@@ -1,0 +1,10 @@
+<mvc:View
+    controllerName="test.app.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="Test Page">
+        <content>
+            <Button text="Click Me" />
+        </content>
+    </Page>
+</mvc:View>
