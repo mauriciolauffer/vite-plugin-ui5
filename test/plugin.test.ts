@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import path from "node:path";
 import { loadUI5Config } from "../src/config.js";
 import { createUI5Resolver } from "../src/resolver.js";
-import ui5 from "../src/index.js";
+import ui5Plugin from "../src/index.js";
 
 const fixtureDir = path.resolve(__dirname, "fixtures/app");
 
@@ -49,7 +49,7 @@ describe("vite-plugin-ui5", () => {
   });
 
   it("should transform index HTML with escaped resource roots", () => {
-    const plugins = ui5({
+    const plugins = ui5Plugin({
       root: fixtureDir,
       webappPath: "webapp",
       resourceRoots: {
@@ -67,7 +67,7 @@ describe("vite-plugin-ui5", () => {
   });
 
   it("should return plugin array from ui5 export", () => {
-    const plugins = ui5({
+    const plugins = ui5Plugin({
       root: fixtureDir,
       webappPath: "webapp",
     });

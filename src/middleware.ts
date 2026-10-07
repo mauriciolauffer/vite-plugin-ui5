@@ -14,7 +14,7 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
   const normalizedWebappDir = path.resolve(webappDir);
 
   return (server: ViteDevServer) => {
-    server.middlewares.use(async (req, res, next) => {
+    server.middlewares.use((req, res, next) => {
       const url = req.url || "";
       const cleanUrl = url.split("?")[0];
 
@@ -27,12 +27,11 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
           "." + (safeRelativePath.startsWith("/") ? safeRelativePath : "/" + safeRelativePath),
         );
 
-        // Enforce path containment within normalizedWebappDir
-        if (
-          localPath.startsWith(normalizedWebappDir) &&
-          fs.existsSync(localPath) &&
-          fs.statSync(localPath).isFile()
-        ) {
+        // Enforce path containment within normalizedWebappDir using path.relative
+        const rel = path.relative(normalizedWebappDir, localPath);
+        const isContained = rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+
+        if (isContained && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
           const content = fs.readFileSync(localPath);
           if (localPath.endsWith(".json")) {
             res.setHeader("Content-Type", "application/json");
@@ -49,17 +48,27 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
 
       // 2. Fetch framework resources (/resources/* or /test-resources/*) from CDN
       const targetUrl = `${cdnBaseUrl.replace(/\/$/, "")}${url}`;
+      const isHttps = targetUrl.startsWith("https");
+      const client = isHttps ? https : http;
 
-      const client = targetUrl.startsWith("https") ? https : http;
+      // Request identity encoding to receive uncompressed text for modification
+      const requestOptions = {
+        headers: {
+          "user-agent": req.headers["user-agent"] || "vite-plugin-ui5",
+          "accept-encoding": "identity",
+        },
+      };
 
       client
-        .get(targetUrl, (proxyRes) => {
+        .get(targetUrl, requestOptions, (proxyRes) => {
           if (proxyRes.statusCode && proxyRes.statusCode >= 200 && proxyRes.statusCode < 300) {
-            res.writeHead(proxyRes.statusCode, proxyRes.headers);
+            const headers = { ...proxyRes.headers };
+            delete headers["content-length"];
+            delete headers["content-encoding"];
 
             // If JS module, transform AMD module code to ESM compatible export
             const isJsModule =
-              url.endsWith(".js") || proxyRes.headers["content-type"]?.includes("javascript");
+              url.endsWith(".js") || headers["content-type"]?.includes("javascript");
             if (isJsModule) {
               const chunks: Buffer[] = [];
               proxyRes.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -68,9 +77,11 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
                 const moduleName = url.replace(/^\/resources\//, "").replace(/\.js$/, "");
                 // Append ESM default export shim referencing sap.ui.require
                 code += `\n/* vite-plugin-ui5 ESM shim */\nif (typeof sap !== 'undefined' && sap.ui && sap.ui.require) {\n  export default sap.ui.require('${moduleName}');\n}\n`;
+                res.writeHead(proxyRes.statusCode || 200, headers);
                 res.end(code);
               });
             } else {
+              res.writeHead(proxyRes.statusCode, proxyRes.headers);
               proxyRes.pipe(res);
             }
           } else if (proxyRes.statusCode === 404) {

@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [".agents/", "node_modules/", "example/"],
+  "plugins": ["typescript", "unicorn", "oxc", "eslint", "vitest", "vue", "promise", "import"],
+  "categories": {
+    "correctness": "error",
+    "perf": "warn",
+    "suspicious": "warn",
+    "pedantic": "off"
+  },
+  "options": {
+    "typeAware": false
+  },
+  "rules": {
+    "import/no-unassigned-import": "off",
+    "import/no-default-export": "off",
+    "import/extensions": ["error", "ignorePackages"]
+  },
+  "env": {
+    "builtin": true,
+    "node": true
+  }
+}
