@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { PluginOption } from "vite";
 
 export interface UI5ResolverOptions {
   appNamespace: string;
@@ -21,7 +20,11 @@ export function createUI5Resolver(options: UI5ResolverOptions) {
         if (source === aliasKey || source.startsWith(aliasKey + "/")) {
           const subPath = source.slice(aliasKey.length);
           const resolved = path.resolve(webappDir, aliasPath, "." + subPath);
-          if (fs.existsSync(resolved) || fs.existsSync(resolved + ".js") || fs.existsSync(resolved + ".ts")) {
+          if (
+            fs.existsSync(resolved) ||
+            fs.existsSync(resolved + ".js") ||
+            fs.existsSync(resolved + ".ts")
+          ) {
             return resolved;
           }
         }
@@ -55,6 +58,6 @@ export function createUI5Resolver(options: UI5ResolverOptions) {
       }
 
       return null;
-    }
+    },
   };
 }

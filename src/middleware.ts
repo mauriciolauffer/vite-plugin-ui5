@@ -21,11 +21,18 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
       // 1. Check if the request is for local webapp static files
       if (!url.startsWith("/resources/") && !url.startsWith("/test-resources/")) {
         // Safe path resolution preventing Path Traversal
-        const safeRelativePath = path.normalize(cleanUrl).replace(/^(\.\.[\/\\])+/, "");
-        const localPath = path.resolve(normalizedWebappDir, "." + (safeRelativePath.startsWith("/") ? safeRelativePath : "/" + safeRelativePath));
+        const safeRelativePath = path.normalize(cleanUrl).replace(/^(\.\.[/\\])+/, "");
+        const localPath = path.resolve(
+          normalizedWebappDir,
+          "." + (safeRelativePath.startsWith("/") ? safeRelativePath : "/" + safeRelativePath),
+        );
 
         // Enforce path containment within normalizedWebappDir
-        if (localPath.startsWith(normalizedWebappDir) && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+        if (
+          localPath.startsWith(normalizedWebappDir) &&
+          fs.existsSync(localPath) &&
+          fs.statSync(localPath).isFile()
+        ) {
           const content = fs.readFileSync(localPath);
           if (localPath.endsWith(".json")) {
             res.setHeader("Content-Type", "application/json");
@@ -48,11 +55,11 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
       client
         .get(targetUrl, (proxyRes) => {
           if (proxyRes.statusCode && proxyRes.statusCode >= 200 && proxyRes.statusCode < 300) {
-            let body = "";
             res.writeHead(proxyRes.statusCode, proxyRes.headers);
 
             // If JS module, transform AMD module code to ESM compatible export
-            const isJsModule = url.endsWith(".js") || proxyRes.headers["content-type"]?.includes("javascript");
+            const isJsModule =
+              url.endsWith(".js") || proxyRes.headers["content-type"]?.includes("javascript");
             if (isJsModule) {
               const chunks: Buffer[] = [];
               proxyRes.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
