@@ -89,15 +89,13 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
 
   const frameworkName = projectConfig.framework?.name || "SAPUI5";
   const defaultCdn =
-    frameworkName === "OpenUI5"
-      ? "https://sdk.openui5.org"
-      : "https://ui5.sap.com";
+    frameworkName === "OpenUI5" ? "https://sdk.openui5.org" : "https://ui5.sap.com";
 
   const cdnBaseUrl = options.cdnUrl || defaultCdn;
 
   const resourceRoots: Record<string, string> = {
     [appNamespace]: "/",
-    ...(options.resourceRoots || {})
+    ...options.resourceRoots,
   };
 
   return {
@@ -105,6 +103,6 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
     appNamespace,
     webappDir,
     cdnBaseUrl,
-    resourceRoots
+    resourceRoots,
   };
 }

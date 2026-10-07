@@ -1,12 +1,10 @@
 import type { PluginOption, Plugin, IndexHtmlTransformResult } from "vite";
-import fs from "node:fs";
-import path from "node:path";
 import { loadUI5Config, type UI5PluginOptions } from "./config.js";
 import { createUI5Resolver } from "./resolver.js";
 import { createUI5Middleware } from "./middleware.js";
 
 export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
-  const { projectConfig, appNamespace, webappDir, cdnBaseUrl, resourceRoots } = loadUI5Config(options);
+  const { appNamespace, webappDir, cdnBaseUrl, resourceRoots } = loadUI5Config(options);
   const resolver = createUI5Resolver({ appNamespace, webappDir, aliases: options.aliases });
   const middleware = createUI5Middleware({ cdnBaseUrl, webappDir });
 
@@ -19,9 +17,9 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
         resolve: {
           alias: {
             [appNamespace.replace(/\./g, "/")]: webappDir,
-            ...(options.aliases || {})
-          }
-        }
+            ...options.aliases,
+          },
+        },
       };
     },
 
@@ -33,14 +31,14 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
       // Ensure resourceRoots attribute is injected safely into bootstrap script tag
       const resourceRootsJson = JSON.stringify(resourceRoots).replace(/'/g, "&#39;");
 
-      if (html.includes('data-sap-ui-resourceroots=')) {
+      if (html.includes("data-sap-ui-resourceroots=")) {
         return html;
       }
 
       if (html.includes('id="sap-ui-bootstrap"')) {
         return html.replace(
           'id="sap-ui-bootstrap"',
-          `id="sap-ui-bootstrap" data-sap-ui-resourceroots='${resourceRootsJson}'`
+          `id="sap-ui-bootstrap" data-sap-ui-resourceroots='${resourceRootsJson}'`,
         );
       }
 
@@ -53,7 +51,7 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
         const escapedCode = JSON.stringify(code);
         return {
           code: `export default ${escapedCode};`,
-          map: null
+          map: null,
         };
       }
 
@@ -64,7 +62,7 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
           const transformedCode = `${code}\n/* vite-plugin-ui5 ESM export shim */\nexport default (typeof sap !== 'undefined' && sap.ui && sap.ui.require) ? sap.ui.require('${moduleName}') : undefined;\n`;
           return {
             code: transformedCode,
-            map: null
+            map: null,
           };
         }
       }
@@ -83,12 +81,12 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
       ) {
         server.ws.send({
           type: "full-reload",
-          path: "*"
+          path: "*",
         });
         return [];
       }
       return undefined;
-    }
+    },
   };
 
   return [mainPlugin, resolver as Plugin];

@@ -10,7 +10,7 @@ describe("vite-plugin-ui5", () => {
   it("should parse ui5.yaml and manifest.json correctly", () => {
     const config = loadUI5Config({
       root: fixtureDir,
-      webappPath: "webapp"
+      webappPath: "webapp",
     });
 
     expect(config.appNamespace).toBe("test.app");
@@ -24,7 +24,7 @@ describe("vite-plugin-ui5", () => {
     const webappDir = path.resolve(fixtureDir, "webapp");
     const resolver = createUI5Resolver({
       appNamespace: "test.app",
-      webappDir
+      webappDir,
     });
 
     const resolvedController = resolver.resolveId("test/app/controller/Main.controller");
@@ -38,7 +38,7 @@ describe("vite-plugin-ui5", () => {
     const webappDir = path.resolve(fixtureDir, "webapp");
     const resolver = createUI5Resolver({
       appNamespace: "test.app",
-      webappDir
+      webappDir,
     });
 
     const resolvedButton = resolver.resolveId("sap/m/Button");
@@ -53,8 +53,8 @@ describe("vite-plugin-ui5", () => {
       root: fixtureDir,
       webappPath: "webapp",
       resourceRoots: {
-        "my.custom": "/custom/path"
-      }
+        "my.custom": "/custom/path",
+      },
     });
 
     const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
@@ -69,7 +69,7 @@ describe("vite-plugin-ui5", () => {
   it("should return plugin array from ui5 export", () => {
     const plugins = ui5({
       root: fixtureDir,
-      webappPath: "webapp"
+      webappPath: "webapp",
     });
 
     expect(Array.isArray(plugins)).toBe(true);
