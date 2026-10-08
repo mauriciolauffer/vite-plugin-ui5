@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+  ui5-tooling-transpile: set this to true or false
+packages:
+  - "."
+  - "playground/ui5-app"
+  - "playground/ui5-typescript"

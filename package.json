@@ -11,19 +11,19 @@
     "vite-plugin"
   ],
   "license": "MIT",
-  "author": "",
+  "author": "Mauricio Lauffer",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsc",
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -37,8 +37,7 @@
     "@types/node": "^26.6.4",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
+    "typescript": "6",
     "vite": "^8.3.3",
     "vitest": "^5.0.3"
   },

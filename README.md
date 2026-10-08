@@ -2,6 +2,38 @@
 
 > Modern Vite development server and tooling platform for SAPUI5 and OpenUI5 applications.
 
+## Vite configuration
+
+Add the plugin to your project's `vite.config.js`:
+
+```js
+import { defineConfig } from "vite";
+import ui5 from "vite-plugin-ui5";
+
+export default defineConfig({
+  plugins: [ui5()],
+});
+```
+
+By default, the plugin reads `ui5.yaml` from the project root and `manifest.json` from `webapp/`. It uses the application ID from the manifest as the UI5 namespace and serves SAPUI5 resources from `https://ui5.sap.com`.
+
+To override those defaults, pass plugin options:
+
+```js
+import { defineConfig } from "vite";
+import ui5 from "vite-plugin-ui5";
+
+export default defineConfig({
+  plugins: [
+    ui5({
+      webappPath: "src/webapp",
+      cdnUrl: "https://sdk.openui5.org",
+      aliases: { "@shared": "./src/shared" },
+    }),
+  ],
+});
+```
+
 ---
 
 ## 💡 Overview & Architectural Concept
