@@ -42,10 +42,10 @@ describe("vite-plugin-ui5", () => {
     });
 
     const resolvedButton = resolver.resolveId("sap/m/Button");
-    expect(resolvedButton).toBe("/resources/sap/m/Button.js");
+    expect(resolvedButton).toBe("\0vite-plugin-ui5:ui5-esm:sap/m/Button");
 
     const resolvedController = resolver.resolveId("sap/ui/core/mvc/Controller");
-    expect(resolvedController).toBe("/resources/sap/ui/core/mvc/Controller.js");
+    expect(resolvedController).toBe("\0vite-plugin-ui5:ui5-esm:sap/ui/core/mvc/Controller");
   });
 
   it("should transform index HTML with escaped resource roots", () => {
@@ -59,11 +59,37 @@ describe("vite-plugin-ui5", () => {
 
     const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
     const html = '<script id="sap-ui-bootstrap"></script>';
-    const result = (mainPlugin as any).transformIndexHtml(html);
+    const result = (mainPlugin as any).transformIndexHtml.handler(html);
 
     expect(result).toContain("data-sap-ui-resourceroots=");
     expect(result).toContain("test.app");
     expect(result).toContain("my.custom");
+    expect(result).toContain("vite-ignore");
+  });
+
+  it("does not add ESM syntax to UI5 resources", () => {
+    const plugins = ui5Plugin({
+      root: fixtureDir,
+      webappPath: "webapp",
+    });
+    const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
+
+    expect(
+      (mainPlugin as any).transform("sap.ui.define([]);", "/resources/sap-ui-core.js"),
+    ).toBeNull();
+  });
+
+  it("wraps UI5 modules for native ESM imports", () => {
+    const plugins = ui5Plugin({
+      root: fixtureDir,
+      webappPath: "webapp",
+    });
+    const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
+
+    const wrapper = (mainPlugin as any).load("\0vite-plugin-ui5:ui5-esm:sap/m/Button");
+
+    expect(wrapper).toContain('sap.ui.require(["sap/m/Button"]');
+    expect(wrapper).toContain("export default moduleExport");
   });
 
   it("should return plugin array from ui5 export", () => {

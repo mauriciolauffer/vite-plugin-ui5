@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": [".agents/", "node_modules/", "example/"],
-  "plugins": ["typescript", "unicorn", "oxc", "eslint", "vitest", "vue", "promise", "import"],
+  "ignorePatterns": [".agents/", "node_modules/", "example/", "playground/"],
+  "plugins": ["typescript", "unicorn", "oxc", "eslint", "vitest", "promise", "import"],
   "categories": {
     "correctness": "error",
     "perf": "warn",

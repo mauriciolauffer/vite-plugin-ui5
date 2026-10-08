@@ -31,12 +31,23 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
         const rel = path.relative(normalizedWebappDir, localPath);
         const isContained = rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 
-        if (isContained && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+        const isViteModule = localPath.endsWith(".js") || localPath.endsWith(".css");
+
+        if (
+          isContained &&
+          !isViteModule &&
+          fs.existsSync(localPath) &&
+          fs.statSync(localPath).isFile()
+        ) {
           const content = fs.readFileSync(localPath);
           if (localPath.endsWith(".json")) {
             res.setHeader("Content-Type", "application/json");
+          } else if (localPath.endsWith(".js")) {
+            res.setHeader("Content-Type", "application/javascript; charset=utf-8");
           } else if (localPath.endsWith(".xml")) {
             res.setHeader("Content-Type", "application/xml");
+          } else if (localPath.endsWith(".css")) {
+            res.setHeader("Content-Type", "text/css; charset=utf-8");
           } else if (localPath.endsWith(".properties")) {
             res.setHeader("Content-Type", "text/plain; charset=utf-8");
           }
@@ -66,24 +77,11 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
             delete headers["content-length"];
             delete headers["content-encoding"];
 
-            // If JS module, transform AMD module code to ESM compatible export
-            const isJsModule =
-              url.endsWith(".js") || headers["content-type"]?.includes("javascript");
-            if (isJsModule) {
-              const chunks: Buffer[] = [];
-              proxyRes.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-              proxyRes.on("end", () => {
-                let code = Buffer.concat(chunks).toString("utf-8");
-                const moduleName = url.replace(/^\/resources\//, "").replace(/\.js$/, "");
-                // Append ESM default export shim referencing sap.ui.require
-                code += `\n/* vite-plugin-ui5 ESM shim */\nif (typeof sap !== 'undefined' && sap.ui && sap.ui.require) {\n  export default sap.ui.require('${moduleName}');\n}\n`;
-                res.writeHead(proxyRes.statusCode || 200, headers);
-                res.end(code);
-              });
-            } else {
-              res.writeHead(proxyRes.statusCode, proxyRes.headers);
-              proxyRes.pipe(res);
-            }
+            // UI5 resources are classic scripts loaded by the UI5 loader. They must
+            // remain unmodified: adding ESM syntax (such as `export`) makes the
+            // bootstrap script invalid when loaded through a normal script tag.
+            res.writeHead(proxyRes.statusCode, headers);
+            proxyRes.pipe(res);
           } else if (proxyRes.statusCode === 404) {
             res.statusCode = 404;
             res.end(`[vite-plugin-ui5] Resource not found on CDN: ${targetUrl}`);

@@ -4,4 +4,5 @@ allowBuilds:
 packages:
   - "."
   - "playground/ui5-app"
+  - "playground/ui5-app-esm"
   - "playground/ui5-typescript"

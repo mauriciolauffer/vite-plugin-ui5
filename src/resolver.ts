@@ -7,6 +7,8 @@ export interface UI5ResolverOptions {
   aliases?: Record<string, string>;
 }
 
+export const UI5_ESM_MODULE_PREFIX = "\0vite-plugin-ui5:ui5-esm:";
+
 export function createUI5Resolver(options: UI5ResolverOptions) {
   const { appNamespace, webappDir, aliases = {} } = options;
   const namespacePrefix = appNamespace.replace(/\./g, "/");
@@ -52,9 +54,9 @@ export function createUI5Resolver(options: UI5ResolverOptions) {
         source.startsWith("sap/tnt/") ||
         source.startsWith("sap/uxap/")
       ) {
-        // Return a virtual resource path to be served by the Vite dev middleware or CDN proxy
-        const cleanPath = source.replace(/\.js$/, "") + ".js";
-        return `/resources/${cleanPath}`;
+        // Load UI5's AMD module through a Vite ESM wrapper. The wrapper first
+        // registers the UI5 resource, then obtains its UI5 export.
+        return `${UI5_ESM_MODULE_PREFIX}${source.replace(/\.js$/, "")}`;
       }
 
       return null;
