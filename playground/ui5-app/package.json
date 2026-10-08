@@ -1,0 +1,23 @@
+{
+  "name": "ui5-app",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Sample of an OpenUI5 app",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "preview": "vite preview",
+    "start": "ui5 serve --port 8080",
+    "build": "ui5 build -a --clean-dest",
+    "build-self-contained": "ui5 build self-contained -a --clean-dest",
+    "serve-dist": "ui5 serve --config ui5-dist.yaml"
+  },
+  "devDependencies": {
+    "@ui5/cli": "^4",
+    "vite": "^8",
+    "vite-plugin-ui5": "link:../.."
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
