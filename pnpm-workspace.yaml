@@ -1,6 +1,6 @@
 allowBuilds:
   esbuild: true
-  ui5-tooling-transpile: set this to true or false
+  ui5-tooling-transpile: true
 packages:
   - "."
   - "playground/ui5-app"

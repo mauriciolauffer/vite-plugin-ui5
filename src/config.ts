@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import YAML from "yaml";
+import yaml from "yaml";
 
 export interface UI5FrameworkConfig {
   name: "SAPUI5" | "OpenUI5";
@@ -67,7 +67,7 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
   if (fs.existsSync(ui5YamlPath)) {
     try {
       const fileContent = fs.readFileSync(ui5YamlPath, "utf-8");
-      projectConfig = YAML.parse(fileContent) || {};
+      projectConfig = yaml.parse(fileContent) || {};
     } catch (e) {
       console.warn(`[vite-plugin-ui5] Warning: Failed to parse ${ui5YamlPath}`, e);
     }
@@ -87,11 +87,7 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
     }
   }
 
-  const frameworkName = projectConfig.framework?.name || "SAPUI5";
-  const defaultCdn =
-    frameworkName === "OpenUI5" ? "https://sdk.openui5.org" : "https://ui5.sap.com";
-
-  const cdnBaseUrl = options.cdnUrl || defaultCdn;
+  const cdnBaseUrl = options.cdnUrl || "https://ui5.sap.com";
 
   const resourceRoots: Record<string, string> = {
     [appNamespace]: "/",

@@ -12,6 +12,9 @@ export interface UI5MiddlewareOptions {
 export function createUI5Middleware(options: UI5MiddlewareOptions) {
   const { cdnBaseUrl, webappDir } = options;
   const normalizedWebappDir = path.resolve(webappDir);
+  const normalizedCdnBaseUrl = cdnBaseUrl.replace(/\/$/, "");
+  const isHttps = normalizedCdnBaseUrl.startsWith("https");
+  const client = isHttps ? https : http;
 
   return (server: ViteDevServer) => {
     server.middlewares.use((req, res, next) => {
@@ -31,6 +34,7 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
         const rel = path.relative(normalizedWebappDir, localPath);
         const isContained = rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 
+        // .js and .css are handled by Vite's own transform pipeline
         const isViteModule = localPath.endsWith(".js") || localPath.endsWith(".css");
 
         if (
@@ -42,12 +46,8 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
           const content = fs.readFileSync(localPath);
           if (localPath.endsWith(".json")) {
             res.setHeader("Content-Type", "application/json");
-          } else if (localPath.endsWith(".js")) {
-            res.setHeader("Content-Type", "application/javascript; charset=utf-8");
           } else if (localPath.endsWith(".xml")) {
             res.setHeader("Content-Type", "application/xml");
-          } else if (localPath.endsWith(".css")) {
-            res.setHeader("Content-Type", "text/css; charset=utf-8");
           } else if (localPath.endsWith(".properties")) {
             res.setHeader("Content-Type", "text/plain; charset=utf-8");
           }
@@ -58,9 +58,7 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
       }
 
       // 2. Fetch framework resources (/resources/* or /test-resources/*) from CDN
-      const targetUrl = `${cdnBaseUrl.replace(/\/$/, "")}${url}`;
-      const isHttps = targetUrl.startsWith("https");
-      const client = isHttps ? https : http;
+      const targetUrl = `${normalizedCdnBaseUrl}${url}`;
 
       // Request identity encoding to receive uncompressed text for modification
       const requestOptions = {
@@ -83,9 +81,11 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
             res.writeHead(proxyRes.statusCode, headers);
             proxyRes.pipe(res);
           } else if (proxyRes.statusCode === 404) {
+            proxyRes.resume();
             res.statusCode = 404;
             res.end(`[vite-plugin-ui5] Resource not found on CDN: ${targetUrl}`);
           } else {
+            proxyRes.resume();
             res.statusCode = proxyRes.statusCode || 500;
             res.end(`[vite-plugin-ui5] CDN request failed with status: ${proxyRes.statusCode}`);
           }

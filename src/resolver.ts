@@ -43,17 +43,13 @@ export function createUI5Resolver(options: UI5ResolverOptions) {
             return candidate;
           }
         }
+        // File not found within the app namespace — do not fall through to
+        // the framework resolver; return null so Vite surfaces a clear error.
+        return null;
       }
 
       // 3. SAP / OpenUI5 Framework module (e.g. "sap/m/Button" or "sap/ui/core/mvc/Controller")
-      if (
-        source.startsWith("sap/") ||
-        source.startsWith("sap/ui/") ||
-        source.startsWith("sap/m/") ||
-        source.startsWith("sap/f/") ||
-        source.startsWith("sap/tnt/") ||
-        source.startsWith("sap/uxap/")
-      ) {
+      if (source.startsWith("sap/")) {
         // Load UI5's AMD module through a Vite ESM wrapper. The wrapper first
         // registers the UI5 resource, then obtains its UI5 export.
         return `${UI5_ESM_MODULE_PREFIX}${source.replace(/\.js$/, "")}`;
