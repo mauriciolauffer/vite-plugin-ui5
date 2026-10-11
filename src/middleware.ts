@@ -7,10 +7,11 @@ import path from "node:path";
 export interface UI5MiddlewareOptions {
   cdnBaseUrl: string;
   webappDir: string;
+  isESM: boolean;
 }
 
 export function createUI5Middleware(options: UI5MiddlewareOptions) {
-  const { cdnBaseUrl, webappDir } = options;
+  const { cdnBaseUrl, webappDir, isESM } = options;
   const normalizedWebappDir = path.resolve(webappDir);
   const normalizedCdnBaseUrl = cdnBaseUrl.replace(/\/$/, "");
   const isHttps = normalizedCdnBaseUrl.startsWith("https");
@@ -33,11 +34,17 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
         // Enforce path containment within normalizedWebappDir using path.relative
         const rel = path.relative(normalizedWebappDir, localPath);
 
-        // .js and .css inside webappDir are served as static files so Vite's
-        // transform pipeline never processes pre-built UI5 AMD scripts.
+        // When isESM is true, .js/.css are ESM source — let Vite's transform
+        // pipeline handle them. Otherwise serve as static files (classic AMD).
+        const isViteScript = isESM && (localPath.endsWith(".js") || localPath.endsWith(".css"));
         const isContained = rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 
-        if (isContained && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+        if (
+          isContained &&
+          !isViteScript &&
+          fs.existsSync(localPath) &&
+          fs.statSync(localPath).isFile()
+        ) {
           const content = fs.readFileSync(localPath);
           if (localPath.endsWith(".json")) {
             res.setHeader("Content-Type", "application/json");

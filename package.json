@@ -27,7 +27,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "oxfmt --check && oxlint",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "dev:ui5": "pnpm dev --filter ui5-app",
+    "dev:ui5:esm": "pnpm dev --filter ui5-app",
+    "dev:ui5:ts": "pnpm dev --filter ui5-app"
   },
   "dependencies": {
     "yaml": "^2.9.1"

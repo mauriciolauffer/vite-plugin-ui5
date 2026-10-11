@@ -2,11 +2,12 @@ import type { PluginOption, Plugin, IndexHtmlTransformResult } from "vite";
 import { loadUI5Config, type UI5PluginOptions } from "./config.js";
 import { createUI5Resolver, UI5_ESM_MODULE_PREFIX } from "./resolver.js";
 import { createUI5Middleware } from "./middleware.js";
+import path from "node:path";
 
 export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
-  const { appNamespace, webappDir, cdnBaseUrl, resourceRoots } = loadUI5Config(options);
+  const { appNamespace, webappDir, cdnBaseUrl, resourceRoots, isESM } = loadUI5Config(options);
   const resolver = createUI5Resolver({ appNamespace, webappDir, aliases: options.aliases });
-  const middleware = createUI5Middleware({ cdnBaseUrl, webappDir });
+  const middleware = createUI5Middleware({ cdnBaseUrl, webappDir, isESM });
 
   const mainPlugin: Plugin = {
     name: "vite-plugin-ui5",
@@ -25,6 +26,10 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
 
     configureServer(server) {
       middleware(server);
+      // Vite only watches files it resolves as modules. Since the middleware
+      // intercepts all files in webappDir before Vite registers them, we add
+      // webappDir explicitly so the watcher fires on any change there.
+      server.watcher.add(webappDir);
     },
 
     transformIndexHtml: {
@@ -83,18 +88,11 @@ export default moduleExport;
     },
 
     handleHotUpdate({ file, server }) {
-      // Trigger HMR reloads for XML views, controller changes, and i18n properties
-      if (
-        file.endsWith(".view.xml") ||
-        file.endsWith(".fragment.xml") ||
-        file.endsWith(".controller.js") ||
-        file.endsWith(".controller.ts") ||
-        file.endsWith(".properties")
-      ) {
-        server.ws.send({
-          type: "full-reload",
-          path: "*",
-        });
+      const rel = path.relative(webappDir, file);
+      const isInWebappDir = rel && !rel.startsWith("..") && !path.isAbsolute(rel);
+
+      if (isInWebappDir) {
+        server.ws.send({ type: "full-reload", path: "*" });
         return [];
       }
       return undefined;

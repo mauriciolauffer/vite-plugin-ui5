@@ -55,6 +55,11 @@ export interface UI5PluginOptions {
    * Custom path aliases
    */
   aliases?: Record<string, string>;
+  /**
+   * Set to true when the app uses native ES module imports (e.g. `import Button from "sap/m/Button"`).
+   * Vite will resolve and transform those imports. Defaults to false (classic AMD sap.ui.define).
+   */
+  isESM?: boolean;
 }
 
 export function loadUI5Config(options: UI5PluginOptions = {}): {
@@ -63,6 +68,7 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
   webappDir: string;
   cdnBaseUrl: string;
   resourceRoots: Record<string, string>;
+  isESM: boolean;
 } {
   const root = options.root || process.cwd();
   const ui5YamlPath = path.resolve(root, options.ui5YamlPath || "ui5.yaml");
@@ -78,10 +84,9 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
     }
   }
 
-  const webappDir = path.resolve(
-    root,
-    options.webappPath || projectConfig.resources?.configuration?.paths?.webapp || "webapp",
-  );
+  const webappPathFromYaml = projectConfig.resources?.configuration?.paths?.webapp;
+  const webappDir = path.resolve(root, options.webappPath || webappPathFromYaml || "webapp");
+  const isESM = options.isESM ?? false;
   const manifestPath = path.resolve(webappDir, "manifest.json");
 
   let appNamespace = projectConfig.metadata?.name || "my.app";
@@ -111,5 +116,6 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
     webappDir,
     cdnBaseUrl,
     resourceRoots,
+    isESM,
   };
 }

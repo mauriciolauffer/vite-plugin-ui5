@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
-import ui5 from "../../src/index.js";
+import ui5 from "vite-plugin-ui5";
 
 export default defineConfig({
-  root: "webapp",
+  root: ".",
   devtools: true,
-  plugins: [ui5()],
+  plugins: [ui5({ isESM: true })],
 });

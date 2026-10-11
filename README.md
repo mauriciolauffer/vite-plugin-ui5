@@ -98,7 +98,7 @@ Integrates directly into Vite plugin lifecycle hooks (`resolveId`, `load`, `tran
 ```bash
 $ npm run dev
 
-  VITE v5.x.x  ready in 180 ms
+  VITE v8.x.x  ready in 180 ms
 
   ➜  Local:   http://localhost:5173/
 
