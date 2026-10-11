@@ -15,6 +15,13 @@ export interface UI5ProjectConfig {
     name?: string;
   };
   framework?: UI5FrameworkConfig;
+  resources?: {
+    configuration?: {
+      paths?: {
+        webapp?: string;
+      };
+    };
+  };
   server?: {
     customMiddleware?: Array<Record<string, unknown>>;
   };
@@ -59,8 +66,6 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
 } {
   const root = options.root || process.cwd();
   const ui5YamlPath = path.resolve(root, options.ui5YamlPath || "ui5.yaml");
-  const webappDir = path.resolve(root, options.webappPath || "webapp");
-  const manifestPath = path.resolve(webappDir, "manifest.json");
 
   let projectConfig: UI5ProjectConfig = {};
 
@@ -72,6 +77,12 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
       console.warn(`[vite-plugin-ui5] Warning: Failed to parse ${ui5YamlPath}`, e);
     }
   }
+
+  const webappDir = path.resolve(
+    root,
+    options.webappPath || projectConfig.resources?.configuration?.paths?.webapp || "webapp",
+  );
+  const manifestPath = path.resolve(webappDir, "manifest.json");
 
   let appNamespace = projectConfig.metadata?.name || "my.app";
 

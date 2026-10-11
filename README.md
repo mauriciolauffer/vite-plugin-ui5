@@ -40,11 +40,11 @@ export default defineConfig({
 
 The `playground/` directory contains three sample apps, each with its own `vite.config.ts`:
 
-| App | Directory | Description |
-| :-- | :-------- | :---------- |
-| UI5 App | `playground/ui5-app/` | Standard SAPUI5 application using the classic UI5 module system |
-| UI5 ESM App | `playground/ui5-app-esm/` | SAPUI5 application using UI5 modules as native ES modules |
-| UI5 TypeScript | `playground/ui5-typescript/` | SAPUI5 application written in TypeScript |
+| App            | Directory                    | Description                                                     |
+| :------------- | :--------------------------- | :-------------------------------------------------------------- |
+| UI5 App        | `playground/ui5-app/`        | Standard SAPUI5 application using the classic UI5 module system |
+| UI5 ESM App    | `playground/ui5-app-esm/`    | SAPUI5 application using UI5 modules as native ES modules       |
+| UI5 TypeScript | `playground/ui5-typescript/` | SAPUI5 application written in TypeScript                        |
 
 ---
 

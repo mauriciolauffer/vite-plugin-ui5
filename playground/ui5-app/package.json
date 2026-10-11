@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:dist": "vite --config vite.ui5-dist.config.js",
     "preview": "vite preview",
     "start": "ui5 serve --port 8080",
     "build": "ui5 build -a --clean-dest",

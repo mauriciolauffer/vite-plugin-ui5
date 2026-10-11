@@ -32,22 +32,21 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
 
         // Enforce path containment within normalizedWebappDir using path.relative
         const rel = path.relative(normalizedWebappDir, localPath);
+
+        // .js and .css inside webappDir are served as static files so Vite's
+        // transform pipeline never processes pre-built UI5 AMD scripts.
         const isContained = rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 
-        // .js and .css are handled by Vite's own transform pipeline
-        const isViteModule = localPath.endsWith(".js") || localPath.endsWith(".css");
-
-        if (
-          isContained &&
-          !isViteModule &&
-          fs.existsSync(localPath) &&
-          fs.statSync(localPath).isFile()
-        ) {
+        if (isContained && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
           const content = fs.readFileSync(localPath);
           if (localPath.endsWith(".json")) {
             res.setHeader("Content-Type", "application/json");
+          } else if (localPath.endsWith(".js")) {
+            res.setHeader("Content-Type", "application/javascript; charset=utf-8");
           } else if (localPath.endsWith(".xml")) {
             res.setHeader("Content-Type", "application/xml");
+          } else if (localPath.endsWith(".css")) {
+            res.setHeader("Content-Type", "text/css; charset=utf-8");
           } else if (localPath.endsWith(".properties")) {
             res.setHeader("Content-Type", "text/plain; charset=utf-8");
           }
