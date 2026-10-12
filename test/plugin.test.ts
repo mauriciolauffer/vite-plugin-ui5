@@ -48,26 +48,7 @@ describe("vite-plugin-ui5", () => {
     expect(resolvedController).toBe("\0vite-plugin-ui5:ui5-esm:sap/ui/core/mvc/Controller");
   });
 
-  it("should transform index HTML with escaped resource roots", () => {
-    const plugins = ui5Plugin({
-      root: fixtureDir,
-      webappPath: "webapp",
-      resourceRoots: {
-        "my.custom": "/custom/path",
-      },
-    });
-
-    const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
-    const html = '<script id="sap-ui-bootstrap"></script>';
-    const result = (mainPlugin as any).transformIndexHtml.handler(html);
-
-    expect(result).toContain("data-sap-ui-resourceroots=");
-    expect(result).toContain("test.app");
-    expect(result).toContain("my.custom");
-    expect(result).toContain("vite-ignore");
-  });
-
-  it("does not add ESM syntax to UI5 resources", () => {
+  it("does not add ESM syntax to UI5 resources", async () => {
     const plugins = ui5Plugin({
       root: fixtureDir,
       webappPath: "webapp",
@@ -75,7 +56,7 @@ describe("vite-plugin-ui5", () => {
     const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
 
     expect(
-      (mainPlugin as any).transform("sap.ui.define([]);", "/resources/sap-ui-core.js"),
+      await (mainPlugin as any).transform("sap.ui.define([]);", "/resources/sap-ui-core.js"),
     ).toBeNull();
   });
 
@@ -100,5 +81,41 @@ describe("vite-plugin-ui5", () => {
 
     expect(Array.isArray(plugins)).toBe(true);
     expect(plugins.length).toBe(2);
+  });
+
+  describe("isESM babel transform", () => {
+    it("does not transform files outside webappDir", async () => {
+      const plugins = ui5Plugin({ webappPath: path.resolve(fixtureDir, "webapp"), isESM: true });
+      const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
+      const result = await (mainPlugin as any).transform(
+        'import UIComponent from "sap/ui/core/UIComponent";',
+        "/some/other/dir/Component.js",
+      );
+      expect(result).toBeNull();
+    });
+
+    it("transpiles ESM to AMD for app JS files when isESM=true", async () => {
+      const webappDir = path.resolve(fixtureDir, "webapp");
+      const plugins = ui5Plugin({ webappPath: webappDir, isESM: true });
+      const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
+      const result = await (mainPlugin as any).transform(
+        'import UIComponent from "sap/ui/core/UIComponent";\nexport default UIComponent.extend("test.app.Component", {});',
+        path.join(webappDir, "Component.js"),
+      );
+      expect(result).not.toBeNull();
+      expect(result.code).toContain("sap.ui.define");
+      expect(result.code).not.toContain("import ");
+    });
+
+    it("does not transform when isESM=false", async () => {
+      const webappDir = path.resolve(fixtureDir, "webapp");
+      const plugins = ui5Plugin({ webappPath: webappDir, isESM: false });
+      const mainPlugin = Array.isArray(plugins) ? plugins[0] : plugins;
+      const result = await (mainPlugin as any).transform(
+        "sap.ui.define([], function() {});",
+        path.join(webappDir, "Component.js"),
+      );
+      expect(result).toBeNull();
+    });
   });
 });

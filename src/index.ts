@@ -1,8 +1,9 @@
-import type { PluginOption, Plugin, IndexHtmlTransformResult } from "vite";
+import type { PluginOption, Plugin } from "vite";
 import { loadUI5Config, type UI5PluginOptions } from "./config.js";
 import { createUI5Resolver, UI5_ESM_MODULE_PREFIX } from "./resolver.js";
 import { createUI5Middleware } from "./middleware.js";
 import path from "node:path";
+import * as babel from "@babel/core";
 
 export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
   // Initial load using cwd — used only to suggest root in config().
@@ -65,37 +66,31 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
       server.watcher.add(resolved.webappDir);
     },
 
-    transformIndexHtml: {
-      // Run before Vite analyzes scripts in index.html. UI5's bootstrap is a
-      // classic script, so Vite must not turn it into a module entry point.
-      order: "pre",
-      handler(html): IndexHtmlTransformResult {
-        const resourceRootsJson = JSON.stringify(resolved.resourceRoots).replace(/'/g, "&#39;");
-
-        return html.replace(/<script\b(?=[^>]*\bid=(["'])sap-ui-bootstrap\1)[^>]*>/i, (tag) => {
-          let transformedTag = tag;
-
-          if (!/\bdata-sap-ui-resourceroots\s*=/i.test(transformedTag)) {
-            transformedTag = transformedTag.replace(
-              />$/,
-              ` data-sap-ui-resourceroots='${resourceRootsJson}'>`,
-            );
-          }
-
-          if (!/\svite-ignore(?:\s|=|>)/i.test(transformedTag)) {
-            transformedTag = transformedTag.replace(/>$/, " vite-ignore>");
-          }
-
-          return transformedTag;
-        });
-      },
-    },
-
-    transform(code, id) {
+    async transform(code, id) {
       if (id.endsWith(".view.xml") || id.endsWith(".fragment.xml")) {
         const escapedCode = JSON.stringify(code);
         return { code: `export default ${escapedCode};`, map: null };
       }
+
+      // When isESM is true, transpile app files from ESM to AMD using
+      // babel-plugin-transform-modules-ui5 so the UI5 loader can handle them.
+      if (resolved.isESM && (id.endsWith(".js") || id.endsWith(".ts"))) {
+        const rel = path.relative(resolved.webappDir, id);
+        const isInWebappDir = rel && !rel.startsWith("..") && !path.isAbsolute(rel);
+        if (!isInWebappDir) return null;
+
+        const result = await babel.transformAsync(code, {
+          filename: id,
+          plugins: [["babel-plugin-transform-modules-ui5", { noWrapBeforeImport: true }]],
+          sourceMaps: true,
+          configFile: false,
+          babelrc: false,
+        });
+
+        if (!result?.code) return null;
+        return { code: result.code, map: (result.map as any) ?? null };
+      }
+
       return null;
     },
 

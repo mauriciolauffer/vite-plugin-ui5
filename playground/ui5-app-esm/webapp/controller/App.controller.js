@@ -9,7 +9,6 @@ const AppController = Controller.extend("sap.ui.demo.todo.controller.App", {
   onInit() {
     this.aSearchFilters = [];
     this.aTabFilters = [];
-
     this.getView().setModel(
       new JSONModel({
         isMobile: Device.browser.mobile,

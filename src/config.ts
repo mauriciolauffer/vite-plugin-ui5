@@ -53,8 +53,10 @@ export interface UI5PluginOptions {
    */
   aliases?: Record<string, string>;
   /**
-   * Set to true when the app uses native ES module imports (e.g. `import Button from "sap/m/Button"`).
-   * Vite will resolve and transform those imports. Defaults to false (classic AMD sap.ui.define).
+   * Set to true when the app uses native ES module syntax (import/export, ES classes).
+   * The plugin will use babel-plugin-transform-modules-ui5 to transpile app files to
+   * AMD (sap.ui.define) at dev/build time so the UI5 loader can handle them at runtime.
+   * Defaults to false (app already written in classic AMD style).
    */
   isESM?: boolean;
 }
