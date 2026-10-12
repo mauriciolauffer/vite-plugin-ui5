@@ -5,9 +5,22 @@ import { createUI5Middleware } from "./middleware.js";
 import path from "node:path";
 
 export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
-  const { appNamespace, webappDir, cdnBaseUrl, resourceRoots, isESM } = loadUI5Config(options);
-  const resolver = createUI5Resolver({ appNamespace, webappDir, aliases: options.aliases });
-  const middleware = createUI5Middleware({ cdnBaseUrl, webappDir, isESM });
+  // Initial load using cwd — used only to suggest root in config().
+  const initial = loadUI5Config(options);
+
+  // Re-resolved in configResolved once Vite's final root is known.
+  // If the user set root explicitly, their value wins over the plugin suggestion.
+  let resolved = initial;
+  let middleware = createUI5Middleware({
+    cdnBaseUrl: initial.cdnBaseUrl,
+    webappDir: initial.webappDir,
+    isESM: initial.isESM,
+  });
+  let resolver = createUI5Resolver({
+    appNamespace: initial.appNamespace,
+    webappDir: initial.webappDir,
+    aliases: options.aliases,
+  });
 
   const mainPlugin: Plugin = {
     name: "vite-plugin-ui5",
@@ -15,13 +28,33 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
 
     config() {
       return {
+        root: initial.webappDir,
         resolve: {
           alias: {
-            [appNamespace.replace(/\./g, "/")]: webappDir,
+            [initial.appNamespace.replace(/\./g, "/")]: initial.webappDir,
             ...options.aliases,
           },
         },
       };
+    },
+
+    configResolved(config) {
+      // If the user set root explicitly it differs from what the plugin suggested.
+      // Re-run loadUI5Config with webappPath overridden to the user's root so all
+      // derived values (appNamespace, resourceRoots, manifest) stay consistent.
+      if (config.root !== initial.webappDir) {
+        resolved = loadUI5Config({ ...options, webappPath: config.root });
+        middleware = createUI5Middleware({
+          cdnBaseUrl: resolved.cdnBaseUrl,
+          webappDir: resolved.webappDir,
+          isESM: resolved.isESM,
+        });
+        resolver = createUI5Resolver({
+          appNamespace: resolved.appNamespace,
+          webappDir: resolved.webappDir,
+          aliases: options.aliases,
+        });
+      }
     },
 
     configureServer(server) {
@@ -29,7 +62,7 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
       // Vite only watches files it resolves as modules. Since the middleware
       // intercepts all files in webappDir before Vite registers them, we add
       // webappDir explicitly so the watcher fires on any change there.
-      server.watcher.add(webappDir);
+      server.watcher.add(resolved.webappDir);
     },
 
     transformIndexHtml: {
@@ -37,7 +70,7 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
       // classic script, so Vite must not turn it into a module entry point.
       order: "pre",
       handler(html): IndexHtmlTransformResult {
-        const resourceRootsJson = JSON.stringify(resourceRoots).replace(/'/g, "&#39;");
+        const resourceRootsJson = JSON.stringify(resolved.resourceRoots).replace(/'/g, "&#39;");
 
         return html.replace(/<script\b(?=[^>]*\bid=(["'])sap-ui-bootstrap\1)[^>]*>/i, (tag) => {
           let transformedTag = tag;
@@ -59,15 +92,10 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
     },
 
     transform(code, id) {
-      // Transform XML View / Fragment files if imported in JS/TS
       if (id.endsWith(".view.xml") || id.endsWith(".fragment.xml")) {
         const escapedCode = JSON.stringify(code);
-        return {
-          code: `export default ${escapedCode};`,
-          map: null,
-        };
+        return { code: `export default ${escapedCode};`, map: null };
       }
-
       return null;
     },
 
@@ -88,7 +116,7 @@ export default moduleExport;
     },
 
     handleHotUpdate({ file, server }) {
-      const rel = path.relative(webappDir, file);
+      const rel = path.relative(resolved.webappDir, file);
       const isInWebappDir = rel && !rel.startsWith("..") && !path.isAbsolute(rel);
 
       if (isInWebappDir) {
@@ -99,7 +127,15 @@ export default moduleExport;
     },
   };
 
-  return [mainPlugin, resolver as Plugin];
+  const resolverPlugin: Plugin = {
+    name: "vite-plugin-ui5:resolver",
+    enforce: "pre",
+    resolveId(source) {
+      return resolver.resolveId(source);
+    },
+  };
+
+  return [mainPlugin, resolverPlugin];
 }
 
 export default ui5;

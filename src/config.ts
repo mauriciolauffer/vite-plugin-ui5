@@ -32,15 +32,12 @@ export interface UI5ProjectConfig {
 
 export interface UI5PluginOptions {
   /**
-   * Path to project root directory. Defaults to process.cwd()
-   */
-  root?: string;
-  /**
-   * Path to ui5.yaml relative to root. Defaults to 'ui5.yaml'
+   * Path to ui5.yaml relative to cwd. Defaults to 'ui5.yaml'
    */
   ui5YamlPath?: string;
   /**
-   * Path to webapp directory relative to root. Defaults to 'webapp'
+   * Path to webapp directory relative to cwd. Defaults to the value from
+   * ui5.yaml resources.configuration.paths.webapp, or 'webapp'.
    */
   webappPath?: string;
   /**
@@ -70,8 +67,8 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
   resourceRoots: Record<string, string>;
   isESM: boolean;
 } {
-  const root = options.root || process.cwd();
-  const ui5YamlPath = path.resolve(root, options.ui5YamlPath || "ui5.yaml");
+  const cwd = process.cwd();
+  const ui5YamlPath = path.resolve(cwd, options.ui5YamlPath || "ui5.yaml");
 
   let projectConfig: UI5ProjectConfig = {};
 
@@ -85,7 +82,7 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
   }
 
   const webappPathFromYaml = projectConfig.resources?.configuration?.paths?.webapp;
-  const webappDir = path.resolve(root, options.webappPath || webappPathFromYaml || "webapp");
+  const webappDir = path.resolve(cwd, options.webappPath || webappPathFromYaml || "webapp");
   const isESM = options.isESM ?? false;
   const manifestPath = path.resolve(webappDir, "manifest.json");
 
