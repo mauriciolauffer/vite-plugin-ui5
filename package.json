@@ -28,9 +28,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxfmt --check && oxlint",
     "format": "oxfmt",
-    "dev:ui5": "pnpm dev --filter ui5-app",
-    "dev:ui5:esm": "pnpm dev --filter ui5-app",
-    "dev:ui5:ts": "pnpm dev --filter ui5-app"
+    "dev:ui5": "pnpm --filter ui5-app run dev",
+    "dev:ui5:esm": "pnpm --filter ui5-app-esm run dev",
+    "dev:ui5:ts": "pnpm --filter ui5-app run dev"
   },
   "dependencies": {
     "yaml": "^2.9.1"
