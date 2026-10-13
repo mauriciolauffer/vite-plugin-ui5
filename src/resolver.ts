@@ -24,22 +24,31 @@ export const UI5_ESM_MODULE_PREFIX = "\0vite-plugin-ui5:ui5-esm:";
 export function createUI5Resolver(options: UI5ResolverOptions) {
   const { appNamespace, webappDir, aliases = {} } = options;
   const namespacePrefix = appNamespace.replace(/\./g, "/");
+  const cache = new Map<string, string | null>();
 
   return {
     name: "vite-plugin-ui5:resolver",
 
     resolveId(source: string) {
+      if (cache.has(source)) return cache.get(source)!;
+
+      const result = this._resolve(source);
+      cache.set(source, result);
+      return result;
+    },
+
+    _resolve(source: string): string | null {
       // 1. Check custom user aliases (e.g., "@app/..." -> "./webapp/...")
       for (const [aliasKey, aliasPath] of Object.entries(aliases)) {
         if (source === aliasKey || source.startsWith(aliasKey + "/")) {
           const subPath = source.slice(aliasKey.length);
           const resolved = path.resolve(webappDir, aliasPath, "." + subPath);
-          if (
-            fs.existsSync(resolved) ||
-            fs.existsSync(resolved + ".js") ||
-            fs.existsSync(resolved + ".ts")
-          ) {
-            return resolved;
+          for (const candidate of [resolved, resolved + ".js", resolved + ".ts"]) {
+            try {
+              if (fs.statSync(candidate).isFile()) return candidate;
+            } catch {
+              // not found — try next
+            }
           }
         }
       }
@@ -51,8 +60,10 @@ export function createUI5Resolver(options: UI5ResolverOptions) {
 
         for (const ext of fileExtensions) {
           const candidate = path.resolve(webappDir, relativePath + ext);
-          if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-            return candidate;
+          try {
+            if (fs.statSync(candidate).isFile()) return candidate;
+          } catch {
+            // not found — try next
           }
         }
         // File not found within the app namespace — do not fall through to

@@ -1,4 +1,5 @@
 import type { ViteDevServer } from "vite";
+import type { IncomingMessage } from "node:http";
 import http from "node:http";
 import https from "node:https";
 import fs from "node:fs";
@@ -11,19 +12,47 @@ export interface UI5MiddlewareOptions {
   isESM: boolean;
 }
 
+function fetchWithRedirects(
+  url: string,
+  requestOptions: { headers: Record<string, string> },
+  callback: (res: IncomingMessage) => void,
+  onError: (err: Error) => void,
+  redirectsLeft = 5,
+): void {
+  const client = url.startsWith("https") ? https : http;
+  client
+    .get(url, requestOptions, (res) => {
+      const { statusCode, headers } = res;
+      if (
+        statusCode &&
+        statusCode >= 300 &&
+        statusCode < 400 &&
+        headers.location &&
+        redirectsLeft > 0
+      ) {
+        res.resume();
+        const next = headers.location.startsWith("http")
+          ? headers.location
+          : new URL(headers.location, url).href;
+        fetchWithRedirects(next, requestOptions, callback, onError, redirectsLeft - 1);
+        return;
+      }
+      callback(res);
+    })
+    .on("error", onError);
+}
+
 /**
  * Creates a Vite dev-server middleware that:
  * 1. Serves static files from `webappDir` directly for non-resource requests.
  * 2. Proxies `/resources/*` and `/test-resources/*` requests to the UI5 CDN
- *    at `cdnBaseUrl`, enabling transparent framework resource loading without a
- *    local `@ui5/cli` setup.
+ *    at `cdnBaseUrl`, following redirects, enabling transparent framework
+ *    resource loading without a local `@ui5/cli` setup.
  */
 export function createUI5Middleware(options: UI5MiddlewareOptions) {
   const { cdnBaseUrl, webappDir, isESM } = options;
   const normalizedWebappDir = path.resolve(webappDir);
   const normalizedCdnBaseUrl = cdnBaseUrl.replace(/\/$/, "");
-  const isHttps = normalizedCdnBaseUrl.startsWith("https");
-  const client = isHttps ? https : http;
 
   return (server: ViteDevServer) => {
     server.middlewares.use((req, res, next) => {
@@ -32,12 +61,7 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
 
       // 1. Check if the request is for local webapp static files
       if (!url.startsWith("/resources/") && !url.startsWith("/test-resources/")) {
-        // Safe path resolution preventing Path Traversal
-        const safeRelativePath = path.normalize(cleanUrl).replace(/^(\.\.[/\\])+/, "");
-        const localPath = path.resolve(
-          normalizedWebappDir,
-          "." + (safeRelativePath.startsWith("/") ? safeRelativePath : "/" + safeRelativePath),
-        );
+        const localPath = path.resolve(normalizedWebappDir, "." + path.normalize(cleanUrl));
 
         // Enforce path containment within normalizedWebappDir using path.relative
         const rel = path.relative(normalizedWebappDir, localPath);
@@ -47,12 +71,16 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
         const isViteScript = isESM && (localPath.endsWith(".js") || localPath.endsWith(".css"));
         const isContained = rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 
-        if (
-          isContained &&
-          !isViteScript &&
-          fs.existsSync(localPath) &&
-          fs.statSync(localPath).isFile()
-        ) {
+        let stat: ReturnType<typeof fs.statSync> | null = null;
+        if (isContained && !isViteScript) {
+          try {
+            stat = fs.statSync(localPath);
+          } catch {
+            // file does not exist — fall through to next()
+          }
+        }
+
+        if (stat?.isFile()) {
           const content = fs.readFileSync(localPath);
           if (localPath.endsWith(".json")) {
             res.setHeader("Content-Type", "application/json");
@@ -74,7 +102,6 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
       // 2. Fetch framework resources (/resources/* or /test-resources/*) from CDN
       const targetUrl = `${normalizedCdnBaseUrl}${url}`;
 
-      // Request identity encoding to receive uncompressed text for modification
       const requestOptions = {
         headers: {
           "user-agent": req.headers["user-agent"] || "vite-plugin-ui5",
@@ -82,8 +109,10 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
         },
       };
 
-      client
-        .get(targetUrl, requestOptions, (proxyRes) => {
+      fetchWithRedirects(
+        targetUrl,
+        requestOptions,
+        (proxyRes) => {
           if (proxyRes.statusCode && proxyRes.statusCode >= 200 && proxyRes.statusCode < 300) {
             const headers = { ...proxyRes.headers };
             delete headers["content-length"];
@@ -103,11 +132,12 @@ export function createUI5Middleware(options: UI5MiddlewareOptions) {
             res.statusCode = proxyRes.statusCode || 500;
             res.end(`[vite-plugin-ui5] CDN request failed with status: ${proxyRes.statusCode}`);
           }
-        })
-        .on("error", (err) => {
+        },
+        (err) => {
           res.statusCode = 500;
           res.end(`[vite-plugin-ui5] Error proxying request to CDN: ${err.message}`);
-        });
+        },
+      );
     });
   };
 }

@@ -51,12 +51,6 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
     config() {
       return {
         root: initial.webappDir,
-        resolve: {
-          alias: {
-            [initial.appNamespace.replace(/\./g, "/")]: initial.webappDir,
-            ...options.aliases,
-          },
-        },
       };
     },
 
@@ -109,7 +103,7 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
           babelrc: false,
         });
 
-        if (!result?.code) return null;
+        if (result?.code == null) return null;
         return { code: result.code, map: (result.map as any) ?? null };
       }
 

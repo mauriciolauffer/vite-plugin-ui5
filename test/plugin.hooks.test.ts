@@ -24,7 +24,7 @@ describe("plugin — factory", () => {
 });
 
 describe("plugin — config() hook", () => {
-  it("returns webappDir as root with appNamespace alias", () => {
+  it("returns webappDir as root", () => {
     const result = (
       mainPlugin({
         ui5YamlPath: path.resolve(fixtureDir, "ui5.yaml"),
@@ -32,7 +32,7 @@ describe("plugin — config() hook", () => {
       }) as any
     ).config();
     expect(result.root).toBe(webappDir);
-    expect(result.resolve.alias["test/app"]).toBe(webappDir);
+    expect(result.resolve).toBeUndefined();
   });
 });
 
