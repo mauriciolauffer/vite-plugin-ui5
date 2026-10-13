@@ -12,6 +12,9 @@
   ],
   "license": "MIT",
   "author": "Mauricio Lauffer",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -25,30 +28,33 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
+    "test:cov": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "oxfmt --check && oxlint",
+    "lint": "oxfmt --check && oxlint src",
     "format": "oxfmt",
     "dev:ui5": "pnpm --filter ui5-app run dev",
     "dev:ui5:esm": "pnpm --filter ui5-app-esm run dev",
-    "dev:ui5:ts": "pnpm --filter ui5-app run dev"
+    "dev:ui5:ts": "pnpm --filter ui5-typescript run dev"
   },
   "dependencies": {
     "@babel/core": "^8.0.7",
+    "@babel/preset-typescript": "^8.0.7",
     "babel-plugin-transform-modules-ui5": "^7.10.0",
     "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",
-    "@types/node": "^26.6.4",
-    "@ui5/cli": "^4.0.70",
+    "@types/node": "^26.6.5",
+    "@ui5/cli": "^4.0.71",
     "@vitejs/devtools": "^0.7.6",
     "@vitejs/devtools-oxc": "^0.7.6",
     "@vitejs/devtools-rolldown": "^0.7.6",
     "@vitejs/devtools-vite": "^0.7.6",
     "@vitejs/devtools-vitest": "^0.7.6",
+    "@vitest/coverage-v8": "^5.0.3",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
-    "oxlint-tsgolint": "^7.0.2003",
+    "oxlint-tsgolint": "^7.0.2004",
     "typescript": "^6.0.3",
     "vite": "^8.3.4",
     "vitest": "^5.0.3"

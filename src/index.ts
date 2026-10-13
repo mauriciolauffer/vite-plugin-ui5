@@ -82,6 +82,7 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
         const result = await babel.transformAsync(code, {
           filename: id,
           plugins: [["babel-plugin-transform-modules-ui5", { noWrapBeforeImport: true }]],
+          presets: id.endsWith(".ts") ? ["@babel/preset-typescript"] : [],
           sourceMaps: true,
           configFile: false,
           babelrc: false,
