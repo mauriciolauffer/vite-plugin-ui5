@@ -4,12 +4,20 @@ import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 
+/** Options for {@link createUI5Middleware}. */
 export interface UI5MiddlewareOptions {
   cdnBaseUrl: string;
   webappDir: string;
   isESM: boolean;
 }
 
+/**
+ * Creates a Vite dev-server middleware that:
+ * 1. Serves static files from `webappDir` directly for non-resource requests.
+ * 2. Proxies `/resources/*` and `/test-resources/*` requests to the UI5 CDN
+ *    at `cdnBaseUrl`, enabling transparent framework resource loading without a
+ *    local `@ui5/cli` setup.
+ */
 export function createUI5Middleware(options: UI5MiddlewareOptions) {
   const { cdnBaseUrl, webappDir, isESM } = options;
   const normalizedWebappDir = path.resolve(webappDir);

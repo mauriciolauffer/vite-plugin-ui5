@@ -2,12 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import yaml from "yaml";
 
+/** UI5 framework configuration from the `framework` key in `ui5.yaml`. */
 export interface UI5FrameworkConfig {
   name: "SAPUI5" | "OpenUI5";
   version?: string;
   libraries?: Array<{ name: string }>;
 }
 
+/** Parsed representation of a `ui5.yaml` project descriptor file. */
 export interface UI5ProjectConfig {
   specVersion?: string;
   type?: string;
@@ -30,6 +32,7 @@ export interface UI5ProjectConfig {
   cdnUrl?: string;
 }
 
+/** Options accepted by the `ui5()` Vite plugin factory. */
 export interface UI5PluginOptions {
   /**
    * Path to ui5.yaml relative to cwd. Defaults to 'ui5.yaml'
@@ -61,6 +64,16 @@ export interface UI5PluginOptions {
   isESM?: boolean;
 }
 
+/**
+ * Reads and resolves all configuration needed by the plugin from `ui5.yaml`,
+ * `manifest.json`, and the provided `options`.
+ *
+ * - `ui5YamlPath` is resolved relative to `cwd`.
+ * - `appNamespace` is taken from `manifest.json`'s `sap.app.id`, falling back
+ *   to `metadata.name` in `ui5.yaml`, and finally `"my.app"`.
+ * - `cdnBaseUrl` incorporates `framework.version` from `ui5.yaml` when present
+ *   (e.g. `https://ui5.sap.com/1.136.0`), unless overridden by `options.cdnUrl`.
+ */
 export function loadUI5Config(options: UI5PluginOptions = {}): {
   projectConfig: UI5ProjectConfig;
   appNamespace: string;
@@ -102,7 +115,9 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
     }
   }
 
-  const cdnBaseUrl = options.cdnUrl || "https://ui5.sap.com";
+  const frameworkVersion = projectConfig.framework?.version;
+  const cdnBaseUrl =
+    options.cdnUrl || `https://ui5.sap.com${frameworkVersion ? `/${frameworkVersion}` : ""}`;
 
   const resourceRoots: Record<string, string> = {
     [appNamespace]: "/",

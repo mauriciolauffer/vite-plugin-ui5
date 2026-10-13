@@ -5,6 +5,27 @@ import { createUI5Middleware } from "./middleware.js";
 import path from "node:path";
 import * as babel from "@babel/core";
 
+/**
+ * Vite plugin for developing and building UI5 applications without `@ui5/cli`.
+ *
+ * Registers two Vite plugins:
+ * - **`vite-plugin-ui5`** — sets Vite's root to the webapp directory, proxies
+ *   `/resources/*` and `/test-resources/*` to the UI5 CDN, transforms
+ *   `.view.xml` / `.fragment.xml` to ESM string exports, and optionally
+ *   transpiles app ESM source to AMD via `babel-plugin-transform-modules-ui5`
+ *   when `isESM: true`.
+ * - **`vite-plugin-ui5:resolver`** — resolves app-namespace and `sap/*`
+ *   imports to their local files or virtual ESM wrappers.
+ *
+ * @example
+ * ```ts
+ * // vite.config.ts
+ * import { defineConfig } from "vite";
+ * import { ui5 } from "vite-plugin-ui5";
+ *
+ * export default defineConfig({ plugins: [ui5()] });
+ * ```
+ */
 export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
   // Initial load using cwd — used only to suggest root in config().
   const initial = loadUI5Config(options);

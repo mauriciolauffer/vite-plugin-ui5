@@ -1,14 +1,26 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/** Options for {@link createUI5Resolver}. */
 export interface UI5ResolverOptions {
   appNamespace: string;
   webappDir: string;
   aliases?: Record<string, string>;
 }
 
+/** Virtual module prefix used to wrap UI5 AMD modules as Vite ESM imports. */
 export const UI5_ESM_MODULE_PREFIX = "\0vite-plugin-ui5:ui5-esm:";
 
+/**
+ * Creates a module resolver that maps UI5-style import specifiers to their
+ * actual files or virtual modules:
+ *
+ * 1. **Custom aliases** — user-defined mappings (e.g. `"@utils"` → `"./webapp/utils"`).
+ * 2. **App namespace** — dot-separated namespace converted to a path under
+ *    `webappDir` (e.g. `"my/app/controller/Main"` → `<webappDir>/controller/Main.js`).
+ * 3. **SAP framework modules** — `sap/*` imports are wrapped in a virtual ESM
+ *    module that loads the AMD module via `sap.ui.require` at runtime.
+ */
 export function createUI5Resolver(options: UI5ResolverOptions) {
   const { appNamespace, webappDir, aliases = {} } = options;
   const namespacePrefix = appNamespace.replace(/\./g, "/");
