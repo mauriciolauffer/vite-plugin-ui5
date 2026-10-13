@@ -1,10 +1,16 @@
 # vite-plugin-ui5
 
-> Modern Vite development server and tooling platform for SAPUI5 and OpenUI5 applications.
+> Vite plugin for SAPUI5 and OpenUI5 applications.
 
-## Vite configuration
+## Installation
 
-Add the plugin to your project's `vite.config.js`:
+```bash
+npm install vite-plugin-ui5
+```
+
+## Configuration
+
+Add the plugin to your `vite.config.js`:
 
 ```js
 import { defineConfig } from "vite";
@@ -15,214 +21,121 @@ export default defineConfig({
 });
 ```
 
-By default, the plugin reads `ui5.yaml` from the project root and `manifest.json` from `webapp/`. It uses the application ID from the manifest as the UI5 namespace and serves SAPUI5 resources from `https://ui5.sap.com`.
+By default, the plugin reads `ui5.yaml` from the project root and `manifest.json` from `webapp/`. It uses the application ID from the manifest as the UI5 namespace and serves SAPUI5/OpenUI5 resources from `https://ui5.sap.com`.
 
-To override those defaults, pass plugin options:
+### Options
 
-```js
-import { defineConfig } from "vite";
-import ui5 from "vite-plugin-ui5";
+```ts
+ui5({
+  // Path to ui5.yaml relative to cwd.
+  // Default: 'ui5.yaml'
+  ui5YamlPath: "ui5.yaml",
 
-export default defineConfig({
-  plugins: [
-    ui5({
-      webappPath: "src/webapp",
-      cdnUrl: "https://sdk.openui5.org",
-      aliases: { "@shared": "./src/shared" },
-    }),
-  ],
+  // Path to webapp directory relative to cwd.
+  // Default: value from ui5.yaml resources.configuration.paths.webapp or 'webapp'
+  webappPath: "webapp",
+
+  // CDN base URL for UI5 framework resources.
+  // Default: https://ui5.sap.com
+  cdnUrl: "https://sdk.openui5.org",
+
+  // Additional resource root mappings injected into sap-ui-bootstrap.
+  resourceRoots: { "my.shared.lib": "/shared" },
+
+  // Custom module path aliases.
+  aliases: { "@shared": "./src/shared" },
+
+  // Set to true when the app uses ESM syntax (import/export) or TypeScript.
+  // The plugin transpiles app files to AMD at serve time
+  // using babel-plugin-transform-modules-ui5 so the UI5 loader can handle them.
+  // Default: false (classic UI5/AMD -> sap.ui.define)
+  isESM: false,
 });
 ```
 
 ---
 
+## Writing UI5 apps
+
+### Classic AMD (default)
+
+Regular UI5 apps using `sap.ui.define` work out of the box with no extra configuration:
+
+```js
+// Component.js
+sap.ui.define(["sap/ui/core/UIComponent"], function (UIComponent) {
+  return UIComponent.extend("my.app.Component", {
+    metadata: { manifest: "json" },
+  });
+});
+```
+
+### ESM (`isESM: true`)
+
+With `isESM: true`, app files can be written using standard ESM syntax. The plugin transpiles them to AMD at serve time using `babel-plugin-transform-modules-ui5`:
+
+```js
+// Component.js
+import UIComponent from "sap/ui/core/UIComponent";
+
+export default UIComponent.extend("my.app.Component", {
+  metadata: { manifest: "json" },
+});
+```
+
+### TypeScript (`isESM: true`)
+
+TypeScript files are also supported when `isESM: true`. Type annotations and ES class syntax are stripped and transpiled to AMD:
+
+```ts
+// Component.ts
+import UIComponent from "sap/ui/core/UIComponent";
+
+export default class Component extends UIComponent {
+  public static metadata = { manifest: "json" };
+}
+```
+
+---
+
+## How it works
+
+### Module resolution
+
+The plugin resolves three categories of imports:
+
+| Import                       | Resolved to                                     |
+| :--------------------------- | :---------------------------------------------- |
+| `sap/m/Button`               | AMD wrapper: `sap.ui.require(["sap/m/Button"])` |
+| `my/app/controller/Main`     | File in `webappDir`                             |
+| Custom alias (`@shared/...`) | Configured alias path                           |
+
+### Framework resources
+
+Requests to `/resources/*` and `/test-resources/*` are proxied to the configured CDN (default: `https://ui5.sap.com`). All other webapp files are served statically, except `.js`/`.ts` files when `isESM: true` which pass through Vite's transform pipeline.
+
+### HMR
+
+Any file change inside `webappDir` triggers a full page reload. UI5's AMD loader does not support partial module re-evaluation, so granular HMR is not possible.
+
+---
+
 ## Playground
 
-The `playground/` directory contains three sample apps, each with its own `vite.config.ts`:
-
-| App            | Directory                    | Description                                                     |
-| :------------- | :--------------------------- | :-------------------------------------------------------------- |
-| UI5 App        | `playground/ui5-app/`        | Standard SAPUI5 application using the classic UI5 module system |
-| UI5 ESM App    | `playground/ui5-app-esm/`    | SAPUI5 application using UI5 modules as native ES modules       |
-| UI5 TypeScript | `playground/ui5-typescript/` | SAPUI5 application written in TypeScript                        |
+| App            | Directory                    | Script                | Description                                     |
+| :------------- | :--------------------------- | :-------------------- | :---------------------------------------------- |
+| UI5 App        | `playground/ui5-app/`        | `npm run dev:ui5`     | Classic AMD app                                 |
+| UI5 ESM App    | `playground/ui5-app-esm/`    | `npm run dev:ui5:esm` | ESM app, transpiled to AMD by the plugin        |
+| UI5 TypeScript | `playground/ui5-typescript/` | `npm run dev:ui5:ts`  | TypeScript app, transpiled to AMD by the plugin |
 
 ---
 
-## 💡 Overview & Architectural Concept
+## Integration with UI5 CLI
 
-`vite-plugin-ui5` bridges the high-performance modern web development experience of **Vite** with **SAPUI5 / OpenUI5**.
+`vite-plugin-ui5` is a development tool only. Production builds should continue to use `@ui5/cli`:
 
-Rather than attempting to replace `@ui5/cli` for production builds and deployment, `vite-plugin-ui5` focuses on providing an elite development experience (DX)—delivering lightning-fast cold starts, sub-millisecond Hot Module Replacement (HMR), first-class TypeScript support, and zero-config project discovery from `ui5.yaml` and `manifest.json`.
-
-```
-                    ┌─────────────────────┐
-                    │      SAPUI5 App     │
-                    │                     │
-                    │  webapp/            │
-                    │  manifest.json      │
-                    │  Component.js       │
-                    │  controller/        │
-                    │  i18n/              │
-                    └──────────┬──────────┘
-                               │
-                     ┌─────────▼─────────┐
-                     │   Vite + UI5      │
-                     │      Plugin       │
-                     ├───────────────────┤
-                     │ UI5 resolution    │
-                     │ UI5 resources     │
-                     │ ui5.yaml          │
-                     │ middleware        │
-                     │ aliases           │
-                     │ preload support   │
-                     │ debug tooling     │
-                     └───────┬───────────┘
-                             │
-               ┌─────────────┴─────────────┐
-               │                           │
-        Vite development             UI5 production
-        server / HMR                 build / deploy
-               │                           │
-               ▼                           ▼
-        Fast HMR / DX                  @ui5/cli
-```
-
----
-
-## 🚀 Key Features
-
-### 1. Vite-Powered UI5 Development
-
-Integrates directly into Vite plugin lifecycle hooks (`resolveId`, `load`, `transform`, `configureServer`, and `transformIndexHtml`) to provide seamless serving of UI5 modules and assets.
-
-```bash
-$ npm run dev
-
-  VITE v8.x.x  ready in 180 ms
-
-  ➜  Local:   http://localhost:5173/
-
-  UI5 Integration
-  ✓ Framework: SAPUI5 v1.136.0
-  ✓ Project:   my.app
-  ✓ Component: my.app.Component
-  ✓ ui5.yaml:  Loaded
-  ✓ Modules:   142 UI5 modules mapped
-```
-
-### 2. Native UI5 Module Resolution
-
-Translates standard ES import paths and UI5 module syntax smoothly:
-
-```javascript
-import Controller from "sap/ui/core/mvc/Controller";
-import JSONModel from "sap/ui/model/json/JSONModel";
-import Button from "sap/m/Button";
-```
-
-Maps UI5 framework paths (`sap/m/Button` → `/resources/sap/m/Button.js`) while maintaining standard resolution for local application modules (`my/app/controller/Main.controller.js`).
-
-### 3. Direct `ui5.yaml` Compatibility
-
-Eliminates configuration duplication by reading directly from `ui5.yaml`. The plugin automatically derives:
-
-- UI5 Framework name and version (`SAPUI5` vs `OpenUI5`)
-- Declared UI5 libraries (`sap.m`, `sap.ui.core`, `sap.ui.layout`)
-- Resource roots and application namespaces
-- Middleware configurations and custom shims
-
-### 4. UI5 Framework Resource Management
-
-Supports serving UI5 resources from multiple backends:
-
-- Local `@ui5/cli` cache / local SDK
-- SAP UI5 CDN (`ui5.sap.com` or `openui5.hana.ondemand.com`)
-- `node_modules` npm-installed UI5 packages
-
-### 5. UI5-Aware Hot Module Replacement (HMR)
-
-Preserves application state, active routing, and model data across code updates:
-
-```
-┌──────────────────────────┐
-│ UI5 Application State    │
-│  Component               │
-│    ├── Router (preserved)│
-│    ├── Models (preserved)│
-│    └── Views             │
-│       ▲                  │
-│       │ Hot Update       │
-│ Controller / View edit   │
-└──────────────────────────┘
-```
-
-Supports granular updates for:
-
-- Controllers & Helpers
-- XML Views & Fragments
-- i18n properties
-- CSS / LESS / SASS stylesheets
-- JSON models & mock data
-
-### 6. XML View & Fragment Transformation
-
-Transforms UI5 XML views and fragments on-the-fly, giving immediate feedback during UI development without full browser reloads.
-
-### 7. First-Class TypeScript Support
-
-Enables modern TypeScript usage out of the box (`.ts` controllers, typed models, auto-generated UI5 type definitions) without requiring complex custom build pipelines.
-
-### 8. `manifest.json` Awareness & Custom Path Aliases
-
-Automatically detects application namespace (`sap.app.id`) and configures path aliases such as `@app` or `@test`.
-
----
-
-## 🎯 Benefits
-
-- **⚡ Blazing Fast DX:** Instant server startup and immediate module updates during development.
-- **🔄 State-Preserving HMR:** No need to re-navigate or re-enter form data after editing controllers or views.
-- **🛠️ Zero Duplicate Config:** Reuses existing `ui5.yaml` and `manifest.json` files without breaking existing UI5 CLI setups.
-- **📦 Modern Tooling Ecosystem:** Unlocks the full Vite ecosystem (ESLint, Prettier, Tailwind CSS, Vitest, Cypress, Playwright).
-- **🛡️ Risk-Free Adoption:** Developers get modern speed during development while relying on `@ui5/cli` for safe, standard production builds (`dist/`, `Component-preload.js`).
-
----
-
-## 🔗 Integration with UI5 CLI
-
-The integration model follows a clean separation of concerns:
-
-| Task                   | Development Engine (`vite-plugin-ui5`) | Production Engine (`@ui5/cli`)                     |
-| :--------------------- | :------------------------------------- | :------------------------------------------------- |
-| **Server**             | Vite Dev Server (Fast, HMR)            | UI5 CLI Server (`ui5 serve`)                       |
-| **Module Loading**     | Dynamic Vite ESM transformation        | Static / Preload bundling                          |
-| **Building**           | Development bundling & preview         | Standard UI5 Build (`ui5 build`)                   |
-| **Preload Generation** | Dev mock / optional                    | `Component-preload.js` generation                  |
-| **Deployment**         | N/A                                    | Fiori / SAP BTP Deployment (`@sap/ux-ui5-tooling`) |
-
-### Deep Tooling Integration
-
-Under the hood, `vite-plugin-ui5` bridges UI5 CLI core tooling libraries:
-
-- Uses `@ui5/project` for reading and resolving `ui5.yaml` dependency trees.
-- Leverages `@ui5/fs` for virtual resource management.
-- Adapts UI5 custom middleware (`customMiddleware`) into Vite's Connect middleware stack.
-
----
-
-## 🗺️ Suggested Roadmap
-
-- **V1 — UI5 Development Adapter**
-  - `ui5.yaml` and `manifest.json` parsing
-  - Framework loading (CDN / local cache)
-  - UI5 module resolution & XML view support
-  - Vite dev server & basic HMR
-- **V2 — Advanced Developer Experience**
-  - Granular UI5 state-preserving HMR for controllers and views
-  - TypeScript integration with automatic type mapping
-  - UI5 custom middleware bridge for existing `ui5.yaml` plugins
-- **V3 — Testing & Quality Tools**
-  - Integration with Vitest for UI5 unit and integration tests
-  - Mock server & OData proxy integration
-- **V4 — Shared UI5 Tooling Core**
-  - Full bidirectional integration with `@ui5/builder` and SAP Fiori deployment tools.
+| Task   | Development                         | Production            |
+| :----- | :---------------------------------- | :-------------------- |
+| Serve  | `vite-plugin-ui5` + Vite dev server | `ui5 serve`           |
+| Build  | —                                   | `ui5 build`           |
+| Deploy | —                                   | `@sap/ux-ui5-tooling` |

@@ -21,6 +21,8 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v7
         with:

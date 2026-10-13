@@ -1,4 +1,11 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": [".agents/", "node_modules/", "example/", "playground/"]
+  "ignorePatterns": [
+    ".agents/",
+    "node_modules/",
+    "example/",
+    "playground/",
+    "test/fixtures/bad-manifest/",
+    "test/fixtures/bad-yaml"
+  ]
 }
