@@ -29,7 +29,6 @@ export interface UI5ProjectConfig {
   };
   appNamespace?: string;
   webappPath?: string;
-  cdnUrl?: string;
 }
 
 /** Options accepted by the `ui5()` Vite plugin factory. */
@@ -43,10 +42,6 @@ export interface UI5PluginOptions {
    * ui5.yaml resources.configuration.paths.webapp, or 'webapp'.
    */
   webappPath?: string;
-  /**
-   * Custom CDN base URL for UI5 resources
-   */
-  cdnUrl?: string;
   /**
    * Custom resource roots overrides
    */
@@ -71,14 +66,11 @@ export interface UI5PluginOptions {
  * - `ui5YamlPath` is resolved relative to `cwd`.
  * - `appNamespace` is taken from `manifest.json`'s `sap.app.id`, falling back
  *   to `metadata.name` in `ui5.yaml`, and finally `"my.app"`.
- * - `cdnBaseUrl` incorporates `framework.version` from `ui5.yaml` when present
- *   (e.g. `https://ui5.sap.com/1.136.0`), unless overridden by `options.cdnUrl`.
  */
 export function loadUI5Config(options: UI5PluginOptions = {}): {
   projectConfig: UI5ProjectConfig;
   appNamespace: string;
   webappDir: string;
-  cdnBaseUrl: string;
   resourceRoots: Record<string, string>;
   isESM: boolean;
 } {
@@ -115,10 +107,6 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
     }
   }
 
-  const frameworkVersion = projectConfig.framework?.version;
-  const cdnBaseUrl =
-    options.cdnUrl || `https://ui5.sap.com${frameworkVersion ? `/${frameworkVersion}` : ""}`;
-
   const resourceRoots: Record<string, string> = {
     [appNamespace]: "/",
     ...options.resourceRoots,
@@ -128,7 +116,6 @@ export function loadUI5Config(options: UI5PluginOptions = {}): {
     projectConfig,
     appNamespace,
     webappDir,
-    cdnBaseUrl,
     resourceRoots,
     isESM,
   };

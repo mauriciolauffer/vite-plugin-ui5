@@ -9,11 +9,13 @@ import * as babel from "@babel/core";
  * Vite plugin for developing and building UI5 applications without `@ui5/cli`.
  *
  * Registers two Vite plugins:
- * - **`vite-plugin-ui5`** — sets Vite's root to the webapp directory, proxies
- *   `/resources/*` and `/test-resources/*` to the UI5 CDN, transforms
- *   `.view.xml` / `.fragment.xml` to ESM string exports, and optionally
- *   transpiles app ESM source to AMD via `babel-plugin-transform-modules-ui5`
- *   when `isESM: true`.
+ * - **`vite-plugin-ui5`** — sets Vite's root to the webapp directory, serves
+ *   static webapp files, transforms `.view.xml` / `.fragment.xml` to ESM string
+ *   exports, and optionally transpiles app ESM source to AMD via
+ *   `babel-plugin-transform-modules-ui5` when `isESM: true`.
+ *   UI5 framework resources (`/resources/*`, `/test-resources/*`) are not proxied
+ *   by this plugin — configure a Vite `server.proxy` in your `vite.config.ts`
+ *   to forward those to the UI5 CDN of your choice.
  * - **`vite-plugin-ui5:resolver`** — resolves app-namespace and `sap/*`
  *   imports to their local files or virtual ESM wrappers.
  *
@@ -34,7 +36,6 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
   // If the user set root explicitly, their value wins over the plugin suggestion.
   let resolved = initial;
   let middleware = createUI5Middleware({
-    cdnBaseUrl: initial.cdnBaseUrl,
     webappDir: initial.webappDir,
     isESM: initial.isESM,
   });
@@ -61,7 +62,6 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
       if (config.root !== initial.webappDir) {
         resolved = loadUI5Config({ ...options, webappPath: config.root });
         middleware = createUI5Middleware({
-          cdnBaseUrl: resolved.cdnBaseUrl,
           webappDir: resolved.webappDir,
           isESM: resolved.isESM,
         });

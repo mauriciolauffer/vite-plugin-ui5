@@ -6,4 +6,10 @@ export default defineConfig({
   plugins: [ui5({
     ui5YamlPath: "ui5-dist.yaml"
   })],
+  server: {
+    proxy: {
+      '/resources': 'https://ui5.sap.com',
+      '/test-resources': 'https://ui5.sap.com',
+    },
+  }
 });

@@ -2,8 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import path from "node:path";
 import fs from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import https from "node:https";
-import http from "node:http";
 import { createUI5Middleware } from "../src/middleware.js";
 
 const fixtureDir = path.resolve(__dirname, "fixtures/app");
@@ -34,7 +32,6 @@ function makeReqRes(url: string) {
 
 function setup(opts: Partial<Parameters<typeof createUI5Middleware>[0]> = {}) {
   const middleware = createUI5Middleware({
-    cdnBaseUrl: "https://ui5.sap.com",
     webappDir,
     isESM: false,
     ...opts,
@@ -151,121 +148,22 @@ describe("middleware.ts — static file serving", () => {
       fs.unlinkSync(cssPath);
     }
   });
-});
 
-describe("middleware.ts — CDN proxy", () => {
-  it("does not call next() for /resources/* (reaches CDN branch)", () => {
+  it("calls next() for /resources/* requests", () => {
     const handler = setup();
     const { req, res } = makeReqRes("/resources/sap-ui-core.js");
     const next = vi.fn();
     handler(req, res, next);
-    expect(next).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
   });
 
-  it("pipes successful CDN response to client", () => {
-    const mockProxyRes = {
-      statusCode: 200,
-      headers: {
-        "content-type": "application/javascript",
-        "content-length": "100",
-        "content-encoding": "gzip",
-      },
-      pipe: vi.fn(),
-      resume: vi.fn(),
-    };
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
+  it("calls next() for /test-resources/* requests", () => {
     const handler = setup();
-    const writeHead = vi.fn();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    (res as any).writeHead = writeHead;
-    handler(req, res, vi.fn());
-
-    expect(writeHead).toHaveBeenCalledWith(
-      200,
-      expect.not.objectContaining({ "content-length": expect.anything() }),
-    );
-    expect(mockProxyRes.pipe).toHaveBeenCalledWith(res);
-    getSpy.mockRestore();
-  });
-
-  it("handles CDN 404 response", () => {
-    const mockProxyRes = { statusCode: 404, resume: vi.fn(), headers: {}, pipe: vi.fn() };
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
-    const handler = setup();
-    const { req, res } = makeReqRes("/resources/nonexistent.js");
-    handler(req, res, vi.fn());
-
-    expect(mockProxyRes.resume).toHaveBeenCalled();
-    expect(res.statusCode).toBe(404);
-    expect(res.end).toHaveBeenCalled();
-    getSpy.mockRestore();
-  });
-
-  it("handles CDN 5xx response", () => {
-    const mockProxyRes = { statusCode: 503, resume: vi.fn(), headers: {}, pipe: vi.fn() };
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
-    const handler = setup();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    handler(req, res, vi.fn());
-
-    expect(res.statusCode).toBe(503);
-    expect(res.end).toHaveBeenCalled();
-    getSpy.mockRestore();
-  });
-
-  it("handles CDN network error", () => {
-    let errorCb: ((err: Error) => void) | null = null;
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, _cb: any) => {
-      return {
-        on: vi.fn((event: string, fn: (err: Error) => void) => {
-          if (event === "error") errorCb = fn;
-          return { on: vi.fn().mockReturnThis() };
-        }),
-      } as any;
-    });
-
-    const handler = setup();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    handler(req, res, vi.fn());
-
-    errorCb!(new Error("ECONNREFUSED"));
-    expect(res.statusCode).toBe(500);
-    expect(res.end).toHaveBeenCalled();
-    getSpy.mockRestore();
-  });
-
-  it("uses http client when cdnBaseUrl is http://", () => {
-    const mockProxyRes = {
-      statusCode: 200,
-      headers: { "content-type": "application/javascript" },
-      pipe: vi.fn(),
-      resume: vi.fn(),
-    };
-    const getSpy = vi.spyOn(http, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
-    const handler = setup({ cdnBaseUrl: "http://ui5.example.com" });
-    const writeHead = vi.fn();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    (res as any).writeHead = writeHead;
-    handler(req, res, vi.fn());
-
-    expect(getSpy).toHaveBeenCalled();
-    expect(mockProxyRes.pipe).toHaveBeenCalledWith(res);
-    getSpy.mockRestore();
+    const { req, res } = makeReqRes("/test-resources/sap/ui/qunit/QUnitUtils.js");
+    const next = vi.fn();
+    handler(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
   });
 });

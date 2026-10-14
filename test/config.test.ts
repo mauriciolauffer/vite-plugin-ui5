@@ -14,7 +14,6 @@ describe("config.ts", () => {
     expect(config.appNamespace).toBe("test.app");
     expect(config.projectConfig.framework?.name).toBe("SAPUI5");
     expect(config.projectConfig.framework?.version).toBe("1.136.0");
-    expect(config.cdnBaseUrl).toBe("https://ui5.sap.com/1.136.0");
     expect(config.resourceRoots["test.app"]).toBe("/");
   });
 
@@ -26,23 +25,6 @@ describe("config.ts", () => {
     expect(config.appNamespace).toBe("test.app");
     expect(config.projectConfig).toEqual({});
     expect(config.isESM).toBe(false);
-  });
-
-  it("uses custom cdnUrl when provided", () => {
-    const config = loadUI5Config({
-      ui5YamlPath: path.resolve(fixtureDir, "nonexistent.yaml"),
-      webappPath: path.resolve(fixtureDir, "webapp"),
-      cdnUrl: "https://sdk.openui5.org",
-    });
-    expect(config.cdnBaseUrl).toBe("https://sdk.openui5.org");
-  });
-
-  it("uses base CDN URL without version when no framework version in yaml", () => {
-    const config = loadUI5Config({
-      ui5YamlPath: path.resolve(fixtureDir, "nonexistent.yaml"),
-      webappPath: path.resolve(fixtureDir, "webapp"),
-    });
-    expect(config.cdnBaseUrl).toBe("https://ui5.sap.com");
   });
 
   it("merges custom resourceRoots", () => {

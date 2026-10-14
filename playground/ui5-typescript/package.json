@@ -1,9 +1,10 @@
 {
-  "name": "ui5-typescript-helloworld",
+  "name": "ui5-typescript",
   "version": "1.0.0",
   "description": "Showcase of a TypeScript setup for developing UI5 applications",
   "license": "Apache-2.0",
   "author": "SAP SE",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/SAP-samples/ui5-typescript-helloworld.git"

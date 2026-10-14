@@ -14,7 +14,7 @@ export default class Component extends UIComponent {
 
   public init(): void {
     // call the base component's init function
-    super.init();
+    UIComponent.prototype.init.call(this);
   }
 
   /**
