@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/mauriciolauffer/vite-plugin-ui5/compare/v0.2.0...v0.2.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* remove cdn and ui5.yaml ([#5](https://github.com/mauriciolauffer/vite-plugin-ui5/issues/5)) ([04c4e2f](https://github.com/mauriciolauffer/vite-plugin-ui5/commit/04c4e2f00e05c7ad4dbac667211155e52c77f87c))
+
 ## 0.2.0 (2026-10-14)
 
 
