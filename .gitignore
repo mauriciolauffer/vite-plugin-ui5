@@ -145,3 +145,5 @@ vite.config.ts.timestamp-*
 
 .playwright-cli/
 .playwright-mcp/
+
+CHANGELOG.md

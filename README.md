@@ -1,6 +1,6 @@
 # vite-plugin-ui5
 
-> Vite plugin for SAPUI5 and OpenUI5 applications.
+> Vite plugin for SAP Fiori/UI5 applications.
 
 ## Installation
 
@@ -18,29 +18,24 @@ import ui5 from "vite-plugin-ui5";
 
 export default defineConfig({
   plugins: [ui5()],
+  server: {
+    proxy: {
+      "/resources/": "https://ui5.sap.com",
+      "/test-resources/": "https://ui5.sap.com",
+    },
+  },
 });
 ```
 
-By default, the plugin reads `ui5.yaml` from the project root and `manifest.json` from `webapp/`. It uses the application ID from the manifest as the UI5 namespace and serves SAPUI5/OpenUI5 resources from `https://ui5.sap.com`.
+The plugin reads `manifest.json` from the webapp directory to detect the UI5 application namespace automatically. UI5 framework resources (`/resources/*`, `/test-resources/*`) are not proxied by the plugin — configure Vite's `server.proxy` to point them at the CDN of your choice.
 
 ### Options
 
 ```ts
 ui5({
-  // Path to ui5.yaml relative to cwd.
-  // Default: 'ui5.yaml'
-  ui5YamlPath: "ui5.yaml",
-
   // Path to webapp directory relative to cwd.
-  // Default: value from ui5.yaml resources.configuration.paths.webapp or 'webapp'
+  // Default: 'webapp'
   webappPath: "webapp",
-
-  // CDN base URL for UI5 framework resources.
-  // Default: https://ui5.sap.com
-  cdnUrl: "https://sdk.openui5.org",
-
-  // Additional resource root mappings injected into sap-ui-bootstrap.
-  resourceRoots: { "my.shared.lib": "/shared" },
 
   // Custom module path aliases.
   aliases: { "@shared": "./src/shared" },
@@ -112,7 +107,7 @@ The plugin resolves three categories of imports:
 
 ### Framework resources
 
-Requests to `/resources/*` and `/test-resources/*` are proxied to the configured CDN (default: `https://ui5.sap.com`). All other webapp files are served statically, except `.js`/`.ts` files when `isESM: true` which pass through Vite's transform pipeline.
+Requests to `/resources/*` and `/test-resources/*` are passed through to Vite's proxy. Configure `server.proxy` in your `vite.config.ts` to forward them to the UI5 CDN of your choice. All other webapp files are served statically, except `.js`/`.ts` files when `isESM: true` which pass through Vite's transform pipeline.
 
 ### HMR
 
@@ -122,11 +117,11 @@ Any file change inside `webappDir` triggers a full page reload. UI5's AMD loader
 
 ## Playground
 
-| App            | Directory                    | Script                | Description                                     |
-| :------------- | :--------------------------- | :-------------------- | :---------------------------------------------- |
-| UI5 App        | `playground/ui5-app/`        | `npm run dev:ui5`     | Classic AMD app                                 |
-| UI5 ESM App    | `playground/ui5-app-esm/`    | `npm run dev:ui5:esm` | ESM app, transpiled to AMD by the plugin        |
-| UI5 TypeScript | `playground/ui5-typescript/` | `npm run dev:ui5:ts`  | TypeScript app, transpiled to AMD by the plugin |
+| App            | Directory                    | Script                | Description                                         |
+| :------------- | :--------------------------- | :-------------------- | :-------------------------------------------------- |
+| UI5 App        | `playground/ui5-app/`        | `npm run dev:ui5`     | Classic UI5 app with UI5/AMD modules                |
+| UI5 ESM App    | `playground/ui5-app-esm/`    | `npm run dev:ui5:esm` | ESM app, transpiled to UI5/AMD by the plugin        |
+| UI5 TypeScript | `playground/ui5-typescript/` | `npm run dev:ui5:ts`  | TypeScript app, transpiled to UI5/AMD by the plugin |
 
 ---
 
@@ -134,8 +129,7 @@ Any file change inside `webappDir` triggers a full page reload. UI5's AMD loader
 
 `vite-plugin-ui5` is a development tool only. Production builds should continue to use `@ui5/cli`:
 
-| Task   | Development                         | Production            |
-| :----- | :---------------------------------- | :-------------------- |
-| Serve  | `vite-plugin-ui5` + Vite dev server | `ui5 serve`           |
-| Build  | —                                   | `ui5 build`           |
-| Deploy | —                                   | `@sap/ux-ui5-tooling` |
+| Task  | Development                         | Production  |
+| :---- | :---------------------------------- | :---------- |
+| Serve | `vite-plugin-ui5` + Vite dev server | `ui5 serve` |
+| Build | —                                   | `ui5 build` |

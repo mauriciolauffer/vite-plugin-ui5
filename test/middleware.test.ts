@@ -2,8 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import path from "node:path";
 import fs from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import https from "node:https";
-import http from "node:http";
 import { createUI5Middleware } from "../src/middleware.js";
 
 const fixtureDir = path.resolve(__dirname, "fixtures/app");
@@ -34,15 +32,14 @@ function makeReqRes(url: string) {
 
 function setup(opts: Partial<Parameters<typeof createUI5Middleware>[0]> = {}) {
   const middleware = createUI5Middleware({
-    cdnBaseUrl: "https://ui5.sap.com",
     webappDir,
     isESM: false,
     ...opts,
   });
-  let handler!: Function;
+  let handler!: (...args: unknown[]) => Promise<void>;
   middleware({
     middlewares: {
-      use: (fn: Function) => {
+      use: (fn: (...args: unknown[]) => Promise<void>) => {
         handler = fn;
       },
     },
@@ -51,86 +48,102 @@ function setup(opts: Partial<Parameters<typeof createUI5Middleware>[0]> = {}) {
 }
 
 describe("middleware.ts — static file serving", () => {
-  it("serves .xml with application/xml content-type", () => {
+  it("serves .xml with application/xml content-type", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/view/Main.view.xml");
-    handler(req, res, vi.fn());
+    await handler(req, res, vi.fn());
     expect(res.end).toHaveBeenCalled();
   });
 
-  it("serves .json with application/json content-type", () => {
+  it("serves .json with application/json content-type", async () => {
     const handler = setup();
     const { req, res, headers } = makeReqRes("/manifest.json");
-    handler(req, res, vi.fn());
+    await handler(req, res, vi.fn());
     expect(headers["Content-Type"]).toBe("application/json");
     expect(res.end).toHaveBeenCalled();
   });
 
-  it("serves .js in classic mode (isESM=false)", () => {
+  it("serves .js in classic mode (isESM=false)", async () => {
     const handler = setup({ isESM: false });
     const { req, res } = makeReqRes("/Component.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(res.end).toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("passes .js to Vite in ESM mode (isESM=true)", () => {
+  it("passes .js to Vite in ESM mode (isESM=true)", async () => {
     const handler = setup({ isESM: true });
     const { req, res } = makeReqRes("/Component.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
     expect(res.end).not.toHaveBeenCalled();
   });
 
-  it("strips query string when resolving path", () => {
+  it("strips query string when resolving path", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/manifest.json?v=123");
-    handler(req, res, vi.fn());
+    await handler(req, res, vi.fn());
     expect(res.end).toHaveBeenCalled();
   });
 
-  it("calls next() for non-existent file", () => {
+  it("strips hash fragment when resolving path", async () => {
+    const handler = setup();
+    const { req, res } = makeReqRes("/manifest.json#section");
+    await handler(req, res, vi.fn());
+    expect(res.end).toHaveBeenCalled();
+  });
+
+  it("calls next() for non-existent file", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/nonexistent.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("calls next() for path traversal", () => {
+  it("calls next() for path traversal", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/../../../etc/passwd");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("calls next() for directory path (not a file)", () => {
+  it("calls next() for directory path (not a file)", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/controller");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("calls next() when req.url is undefined", () => {
+  it("calls next() when req.url is undefined", async () => {
     const handler = setup();
     const req = { url: undefined, headers: {} } as unknown as IncomingMessage;
     const { res } = makeReqRes("/");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("serves .properties with text/plain content-type", () => {
+  it("calls next() for .html files so Vite's transform pipeline runs", async () => {
+    const handler = setup();
+    const { req, res } = makeReqRes("/index.html");
+    const next = vi.fn();
+    await handler(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
+  });
+
+  it("serves .properties with text/plain content-type", async () => {
     const propsPath = path.resolve(webappDir, "i18n.properties");
     fs.writeFileSync(propsPath, "key=value");
     try {
       const handler = setup();
       const { req, res, headers } = makeReqRes("/i18n.properties");
-      handler(req, res, vi.fn());
+      await handler(req, res, vi.fn());
       expect(headers["Content-Type"]).toBe("text/plain; charset=utf-8");
       expect(res.end).toHaveBeenCalled();
     } finally {
@@ -138,13 +151,13 @@ describe("middleware.ts — static file serving", () => {
     }
   });
 
-  it("serves .css with text/css content-type in classic mode", () => {
+  it("serves .css with text/css content-type in classic mode", async () => {
     const cssPath = path.resolve(webappDir, "style.css");
     fs.writeFileSync(cssPath, "body {}");
     try {
       const handler = setup({ isESM: false });
       const { req, res, headers } = makeReqRes("/style.css");
-      handler(req, res, vi.fn());
+      await handler(req, res, vi.fn());
       expect(headers["Content-Type"]).toBe("text/css; charset=utf-8");
       expect(res.end).toHaveBeenCalled();
     } finally {
@@ -153,119 +166,22 @@ describe("middleware.ts — static file serving", () => {
   });
 });
 
-describe("middleware.ts — CDN proxy", () => {
-  it("does not call next() for /resources/* (reaches CDN branch)", () => {
+describe("middleware.ts — proxy pass-through", () => {
+  it("calls next() for /resources/* requests", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/resources/sap-ui-core.js");
     const next = vi.fn();
-    handler(req, res, next);
-    expect(next).not.toHaveBeenCalled();
+    await handler(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
   });
 
-  it("pipes successful CDN response to client", () => {
-    const mockProxyRes = {
-      statusCode: 200,
-      headers: {
-        "content-type": "application/javascript",
-        "content-length": "100",
-        "content-encoding": "gzip",
-      },
-      pipe: vi.fn(),
-      resume: vi.fn(),
-    };
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
+  it("calls next() for /test-resources/* requests", async () => {
     const handler = setup();
-    const writeHead = vi.fn();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    (res as any).writeHead = writeHead;
-    handler(req, res, vi.fn());
-
-    expect(writeHead).toHaveBeenCalledWith(
-      200,
-      expect.not.objectContaining({ "content-length": expect.anything() }),
-    );
-    expect(mockProxyRes.pipe).toHaveBeenCalledWith(res);
-    getSpy.mockRestore();
-  });
-
-  it("handles CDN 404 response", () => {
-    const mockProxyRes = { statusCode: 404, resume: vi.fn(), headers: {}, pipe: vi.fn() };
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
-    const handler = setup();
-    const { req, res } = makeReqRes("/resources/nonexistent.js");
-    handler(req, res, vi.fn());
-
-    expect(mockProxyRes.resume).toHaveBeenCalled();
-    expect(res.statusCode).toBe(404);
-    expect(res.end).toHaveBeenCalled();
-    getSpy.mockRestore();
-  });
-
-  it("handles CDN 5xx response", () => {
-    const mockProxyRes = { statusCode: 503, resume: vi.fn(), headers: {}, pipe: vi.fn() };
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
-    const handler = setup();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    handler(req, res, vi.fn());
-
-    expect(res.statusCode).toBe(503);
-    expect(res.end).toHaveBeenCalled();
-    getSpy.mockRestore();
-  });
-
-  it("handles CDN network error", () => {
-    let errorCb: ((err: Error) => void) | null = null;
-    const getSpy = vi.spyOn(https, "get").mockImplementation((_url: any, _opts: any, _cb: any) => {
-      return {
-        on: vi.fn((event: string, fn: (err: Error) => void) => {
-          if (event === "error") errorCb = fn;
-          return { on: vi.fn().mockReturnThis() };
-        }),
-      } as any;
-    });
-
-    const handler = setup();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    handler(req, res, vi.fn());
-
-    errorCb!(new Error("ECONNREFUSED"));
-    expect(res.statusCode).toBe(500);
-    expect(res.end).toHaveBeenCalled();
-    getSpy.mockRestore();
-  });
-
-  it("uses http client when cdnBaseUrl is http://", () => {
-    const mockProxyRes = {
-      statusCode: 200,
-      headers: { "content-type": "application/javascript" },
-      pipe: vi.fn(),
-      resume: vi.fn(),
-    };
-    const getSpy = vi.spyOn(http, "get").mockImplementation((_url: any, _opts: any, cb: any) => {
-      cb(mockProxyRes);
-      return { on: vi.fn().mockReturnThis() } as any;
-    });
-
-    const handler = setup({ cdnBaseUrl: "http://ui5.example.com" });
-    const writeHead = vi.fn();
-    const { req, res } = makeReqRes("/resources/sap-ui-core.js");
-    (res as any).writeHead = writeHead;
-    handler(req, res, vi.fn());
-
-    expect(getSpy).toHaveBeenCalled();
-    expect(mockProxyRes.pipe).toHaveBeenCalledWith(res);
-    getSpy.mockRestore();
+    const { req, res } = makeReqRes("/test-resources/sap/ui/qunit/QUnitUtils.js");
+    const next = vi.fn();
+    await handler(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
   });
 });
