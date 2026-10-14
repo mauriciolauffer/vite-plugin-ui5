@@ -27,7 +27,6 @@ describe("plugin — config() hook", () => {
   it("returns webappDir as root", () => {
     const result = (
       mainPlugin({
-        ui5YamlPath: path.resolve(fixtureDir, "ui5.yaml"),
         webappPath: webappDir,
       }) as any
     ).config();
@@ -39,7 +38,6 @@ describe("plugin — config() hook", () => {
 describe("plugin — configResolved() hook", () => {
   it("does not throw when Vite root matches suggested root", () => {
     const plugin = mainPlugin({
-      ui5YamlPath: path.resolve(fixtureDir, "ui5.yaml"),
       webappPath: webappDir,
     });
     expect(() => (plugin as any).configResolved({ root: webappDir })).not.toThrow();
@@ -47,7 +45,6 @@ describe("plugin — configResolved() hook", () => {
 
   it("re-resolves when Vite root differs from suggested root", () => {
     const plugin = mainPlugin({
-      ui5YamlPath: path.resolve(fixtureDir, "ui5.yaml"),
       webappPath: webappDir,
     });
     expect(() => (plugin as any).configResolved({ root: path.resolve(fixtureDir) })).not.toThrow();
@@ -57,7 +54,6 @@ describe("plugin — configResolved() hook", () => {
 describe("plugin — configureServer() hook", () => {
   it("registers middleware and watches webappDir", () => {
     const plugin = mainPlugin({
-      ui5YamlPath: path.resolve(fixtureDir, "ui5.yaml"),
       webappPath: webappDir,
     });
     const add = vi.fn();
@@ -140,7 +136,6 @@ describe("plugin — handleHotUpdate() hook", () => {
 describe("plugin — resolverPlugin.resolveId()", () => {
   it("resolves sap/ modules to virtual ESM prefix", () => {
     const plugin = resolverPlugin({
-      ui5YamlPath: path.resolve(fixtureDir, "ui5.yaml"),
       webappPath: webappDir,
     });
     expect((plugin as any).resolveId("sap/m/Button")).toBe(
@@ -150,7 +145,6 @@ describe("plugin — resolverPlugin.resolveId()", () => {
 
   it("returns null for unrecognized sources", () => {
     const plugin = resolverPlugin({
-      ui5YamlPath: path.resolve(fixtureDir, "ui5.yaml"),
       webappPath: webappDir,
     });
     expect((plugin as any).resolveId("lodash")).toBeNull();

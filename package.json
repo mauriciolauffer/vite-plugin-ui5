@@ -44,8 +44,7 @@
     "dev:ui5:ts": "pnpm --filter ui5-typescript run dev"
   },
   "dependencies": {
-    "babel-plugin-transform-modules-ui5": "^7.10.0",
-    "yaml": "^2.9.1"
+    "babel-plugin-transform-modules-ui5": "^7.10.0"
   },
   "devDependencies": {
     "@babel/core": "^8.0.7",

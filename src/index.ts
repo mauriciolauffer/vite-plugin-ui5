@@ -58,7 +58,7 @@ export function ui5(options: UI5PluginOptions = {}): PluginOption[] {
     configResolved(config) {
       // If the user set root explicitly it differs from what the plugin suggested.
       // Re-run loadUI5Config with webappPath overridden to the user's root so all
-      // derived values (appNamespace, resourceRoots, manifest) stay consistent.
+      // derived values (appNamespace, manifest) stay consistent.
       if (config.root !== initial.webappDir) {
         resolved = loadUI5Config({ ...options, webappPath: config.root });
         middleware = createUI5Middleware({
