@@ -36,10 +36,10 @@ function setup(opts: Partial<Parameters<typeof createUI5Middleware>[0]> = {}) {
     isESM: false,
     ...opts,
   });
-  let handler!: Function;
+  let handler!: (...args: unknown[]) => Promise<void>;
   middleware({
     middlewares: {
-      use: (fn: Function) => {
+      use: (fn: (...args: unknown[]) => Promise<void>) => {
         handler = fn;
       },
     },
@@ -48,86 +48,102 @@ function setup(opts: Partial<Parameters<typeof createUI5Middleware>[0]> = {}) {
 }
 
 describe("middleware.ts — static file serving", () => {
-  it("serves .xml with application/xml content-type", () => {
+  it("serves .xml with application/xml content-type", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/view/Main.view.xml");
-    handler(req, res, vi.fn());
+    await handler(req, res, vi.fn());
     expect(res.end).toHaveBeenCalled();
   });
 
-  it("serves .json with application/json content-type", () => {
+  it("serves .json with application/json content-type", async () => {
     const handler = setup();
     const { req, res, headers } = makeReqRes("/manifest.json");
-    handler(req, res, vi.fn());
+    await handler(req, res, vi.fn());
     expect(headers["Content-Type"]).toBe("application/json");
     expect(res.end).toHaveBeenCalled();
   });
 
-  it("serves .js in classic mode (isESM=false)", () => {
+  it("serves .js in classic mode (isESM=false)", async () => {
     const handler = setup({ isESM: false });
     const { req, res } = makeReqRes("/Component.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(res.end).toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("passes .js to Vite in ESM mode (isESM=true)", () => {
+  it("passes .js to Vite in ESM mode (isESM=true)", async () => {
     const handler = setup({ isESM: true });
     const { req, res } = makeReqRes("/Component.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
     expect(res.end).not.toHaveBeenCalled();
   });
 
-  it("strips query string when resolving path", () => {
+  it("strips query string when resolving path", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/manifest.json?v=123");
-    handler(req, res, vi.fn());
+    await handler(req, res, vi.fn());
     expect(res.end).toHaveBeenCalled();
   });
 
-  it("calls next() for non-existent file", () => {
+  it("strips hash fragment when resolving path", async () => {
+    const handler = setup();
+    const { req, res } = makeReqRes("/manifest.json#section");
+    await handler(req, res, vi.fn());
+    expect(res.end).toHaveBeenCalled();
+  });
+
+  it("calls next() for non-existent file", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/nonexistent.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("calls next() for path traversal", () => {
+  it("calls next() for path traversal", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/../../../etc/passwd");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("calls next() for directory path (not a file)", () => {
+  it("calls next() for directory path (not a file)", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/controller");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("calls next() when req.url is undefined", () => {
+  it("calls next() when req.url is undefined", async () => {
     const handler = setup();
     const req = { url: undefined, headers: {} } as unknown as IncomingMessage;
     const { res } = makeReqRes("/");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
   });
 
-  it("serves .properties with text/plain content-type", () => {
+  it("calls next() for .html files so Vite's transform pipeline runs", async () => {
+    const handler = setup();
+    const { req, res } = makeReqRes("/index.html");
+    const next = vi.fn();
+    await handler(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
+  });
+
+  it("serves .properties with text/plain content-type", async () => {
     const propsPath = path.resolve(webappDir, "i18n.properties");
     fs.writeFileSync(propsPath, "key=value");
     try {
       const handler = setup();
       const { req, res, headers } = makeReqRes("/i18n.properties");
-      handler(req, res, vi.fn());
+      await handler(req, res, vi.fn());
       expect(headers["Content-Type"]).toBe("text/plain; charset=utf-8");
       expect(res.end).toHaveBeenCalled();
     } finally {
@@ -135,34 +151,36 @@ describe("middleware.ts — static file serving", () => {
     }
   });
 
-  it("serves .css with text/css content-type in classic mode", () => {
+  it("serves .css with text/css content-type in classic mode", async () => {
     const cssPath = path.resolve(webappDir, "style.css");
     fs.writeFileSync(cssPath, "body {}");
     try {
       const handler = setup({ isESM: false });
       const { req, res, headers } = makeReqRes("/style.css");
-      handler(req, res, vi.fn());
+      await handler(req, res, vi.fn());
       expect(headers["Content-Type"]).toBe("text/css; charset=utf-8");
       expect(res.end).toHaveBeenCalled();
     } finally {
       fs.unlinkSync(cssPath);
     }
   });
+});
 
-  it("calls next() for /resources/* requests", () => {
+describe("middleware.ts — proxy pass-through", () => {
+  it("calls next() for /resources/* requests", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/resources/sap-ui-core.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
     expect(res.end).not.toHaveBeenCalled();
   });
 
-  it("calls next() for /test-resources/* requests", () => {
+  it("calls next() for /test-resources/* requests", async () => {
     const handler = setup();
     const { req, res } = makeReqRes("/test-resources/sap/ui/qunit/QUnitUtils.js");
     const next = vi.fn();
-    handler(req, res, next);
+    await handler(req, res, next);
     expect(next).toHaveBeenCalled();
     expect(res.end).not.toHaveBeenCalled();
   });

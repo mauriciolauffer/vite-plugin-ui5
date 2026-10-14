@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [ui5({ isESM: true })],
   server: {
     proxy: {
-      '/resources': 'https://ui5.sap.com',
-      '/test-resources': 'https://ui5.sap.com',
+      '/resources/': 'https://ui5.sap.com',
+      '/test-resources/': 'https://ui5.sap.com',
     },
   }
 });
