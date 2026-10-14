@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-ui5",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Modern Vite development server and tooling platform for SAPUI5 and OpenUI5 applications.",
   "keywords": [
     "fiori",
