@@ -168,7 +168,7 @@ importers:
     dependencies:
       babel-plugin-transform-modules-ui5:
         specifier: ^7.10.0
-        version: 7.10.0(@babel/core@8.0.7)
+        version: 7.11.0(@babel/core@8.0.7)
     devDependencies:
       '@babel/core':
         specifier: ^8.0.7
@@ -1820,8 +1820,8 @@ packages:
   babel-plugin-transform-async-to-promises@0.8.18:
     resolution: {integrity: sha512-WpOrF76nUHijnNn10eBGOHZmXQC8JYRME9rOLxStOga7Av2VO53ehVFvVNImMksVtQuL2/7ZNxEgxnx7oo/3Hw==}
 
-  babel-plugin-transform-modules-ui5@7.10.0:
-    resolution: {integrity: sha512-O4AGsF0G0yfndH62Vpm3zKzl2bLgeZrK2Geb9Hr4OYirR1XBwRpIfWjGEk38HL9bs7bn2id58THK4SAWwHkU3g==}
+  babel-plugin-transform-modules-ui5@7.11.0:
+    resolution: {integrity: sha512-mEjdsc8cQmZxc4CFBnFAJNk5X0KfvNj/FaeKavsDYAwaaercidt51B3PCs6/qORPitTXMoXVMg8wKDPlhpee2A==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@babel/core': '*'
@@ -5594,12 +5594,12 @@ snapshots:
 
   babel-plugin-transform-async-to-promises@0.8.18: {}
 
-  babel-plugin-transform-modules-ui5@7.10.0(@babel/core@7.29.7):
+  babel-plugin-transform-modules-ui5@7.11.0(@babel/core@7.29.7):
     dependencies:
       '@babel/core': 7.29.7
       comment-parser: 1.4.7
 
-  babel-plugin-transform-modules-ui5@7.10.0(@babel/core@8.0.7):
+  babel-plugin-transform-modules-ui5@7.11.0(@babel/core@8.0.7):
     dependencies:
       '@babel/core': 8.0.7
       comment-parser: 1.4.7
@@ -5608,7 +5608,7 @@ snapshots:
 
   babel-preset-transform-ui5@7.10.0(@babel/core@7.29.7):
     dependencies:
-      babel-plugin-transform-modules-ui5: 7.10.0(@babel/core@7.29.7)
+      babel-plugin-transform-modules-ui5: 7.11.0(@babel/core@7.29.7)
     transitivePeerDependencies:
       - '@babel/core'
 
